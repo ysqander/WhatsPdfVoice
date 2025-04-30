@@ -15,12 +15,8 @@ if (!fs.existsSync(pdfDir)) {
 
 // Generate a PDF from the chat data
 export async function generatePdf(chatData: ChatExport): Promise<string> {
-  // For interactive audio elements, we need to use puppeteer
-  if (chatData.processingOptions.includeVoiceMessages) {
-    return generatePdfWithPuppeteer(chatData);
-  } else {
-    return generatePdfWithPdfLib(chatData);
-  }
+  // Always use PDFLib as Puppeteer has system dependency issues
+  return generatePdfWithPdfLib(chatData);
 }
 
 // Generate a PDF with PDF-lib (no interactive elements)
@@ -333,7 +329,7 @@ function generateHTML(chatData: ChatExport): string {
   }
   
   // HTML header with styles
-  const html = `
+  let html = `
     <!DOCTYPE html>
     <html>
     <head>
