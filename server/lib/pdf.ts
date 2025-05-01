@@ -16,8 +16,8 @@ if (!fs.existsSync(pdfDir)) {
 // Generate a PDF from the chat data
 export async function generatePdf(chatData: ChatExport): Promise<string> {
   // Always use PDFLib as Puppeteer has system dependency issues
-  const result = await generatePdfWithPdfLib(chatData);
-  return result.pdfPath;
+  const { pdfPath } = await generatePdfWithPdfLib(chatData);
+  return pdfPath;
 }
 
 // Generate a PDF with PDF-lib (no interactive elements)

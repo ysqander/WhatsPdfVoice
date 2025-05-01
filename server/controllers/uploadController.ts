@@ -138,7 +138,7 @@ export const uploadController = {
           console.log('PDF generation completed:', pdfResult);
           
           // Save PDF URL
-          const pdfFileName = path.basename(pdfResult.pdfPath);
+          const pdfFileName = path.basename(pdfResult);
           console.log('Generated PDF filename:', pdfFileName);
           const pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
           console.log('Generated PDF URL:', pdfUrl);
