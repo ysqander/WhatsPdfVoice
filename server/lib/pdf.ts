@@ -113,6 +113,14 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
     messagesByDate[date].push(message);
   }
 
+  console.log('Grouped messages by date:', {
+    totalDates: Object.keys(messagesByDate).length,
+    messagesByDateSample: Object.entries(messagesByDate).slice(0, 2).map(([date, msgs]) => ({
+      date,
+      messageCount: msgs.length
+    }))
+  });
+
   // Start position for messages
   let y = height - margin - 100;
   let currentPage = page;

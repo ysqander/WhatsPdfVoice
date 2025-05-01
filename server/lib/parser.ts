@@ -64,6 +64,13 @@ export async function parse(filePath: string, options: ProcessingOptions): Promi
       processingOptions: options
     };
     
+    console.log('Parsed chat export:', {
+      messageCount: messages.length,
+      participantCount: participants.length,
+      firstMessageSample: messages[0],
+      options
+    });
+    
     return chatExport;
     
   } catch (error) {
