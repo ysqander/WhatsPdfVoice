@@ -87,7 +87,7 @@ export default function UploadSection({
       };
       
       // Track processing with progress events
-      const source = new EventSource('/api/whatsapp/process-status');
+      const source = new EventSource(`/api/whatsapp/process-status?clientId=${data.clientId}`);
       source.onmessage = (event) => {
         const data = JSON.parse(event.data);
         setProcessingProgress(data.progress);
@@ -121,13 +121,13 @@ export default function UploadSection({
       
       source.onerror = () => {
         source.close();
-        throw new Error('Error processing file');
+        setIsProcessing(false);
+        toast({
+          variant: "destructive",
+          title: "Error processing file",
+          description: "Connection to server lost"
+        });
       };
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error processing file');
-      }
       
     } catch (error) {
       setIsProcessing(false);
