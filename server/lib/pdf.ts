@@ -14,9 +14,10 @@ if (!fs.existsSync(pdfDir)) {
 }
 
 // Generate a PDF from the chat data
-export async function generatePdf(chatData: ChatExport): Promise<{ pdfPath: string; pdfId: string }> {
+export async function generatePdf(chatData: ChatExport): Promise<string> {
   // Always use PDFLib as Puppeteer has system dependency issues
-  return generatePdfWithPdfLib(chatData);
+  const { pdfPath } = await generatePdfWithPdfLib(chatData);
+  return pdfPath;
 }
 
 // Generate a PDF with PDF-lib (no interactive elements)
@@ -263,10 +264,14 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
   }
 
   // Save PDF
+  console.log('Saving PDF document...');
   const pdfBytes = await pdfDoc.save();
   const pdfId = uuidv4();
   const pdfPath = path.join(pdfDir, `${pdfId}.pdf`);
+  console.log('Writing PDF to path:', pdfPath);
   fs.writeFileSync(pdfPath, pdfBytes);
+  console.log('PDF file written successfully');
+  console.log('PDF details:', { pdfId, pdfPath, size: pdfBytes.length });
 
   return { pdfPath, pdfId };
 }

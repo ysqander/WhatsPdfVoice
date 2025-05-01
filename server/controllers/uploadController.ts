@@ -130,13 +130,21 @@ export const uploadController = {
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 60, step: ProcessingStep.CONVERT_VOICE })}\n\n`);
           
           // Generate PDF
+          console.log('Starting PDF generation for chat export:', savedChatExport.id);
           storage.saveProcessingProgress(clientId, 80, ProcessingStep.GENERATE_PDF);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 80, step: ProcessingStep.GENERATE_PDF })}\n\n`);
-          const pdfPath = await generatePdf(chatData);
+          
+          const pdfResult = await generatePdf(chatData);
+          console.log('PDF generation completed:', pdfResult);
           
           // Save PDF URL
-          const pdfUrl = `/api/whatsapp/pdf/${path.basename(pdfPath)}`;
+          const pdfFileName = path.basename(pdfResult);
+          console.log('Generated PDF filename:', pdfFileName);
+          const pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
+          console.log('Generated PDF URL:', pdfUrl);
+          
           await storage.savePdfUrl(savedChatExport.id!, pdfUrl);
+          console.log('PDF URL saved to storage for chat export:', savedChatExport.id);
           
           // Update progress: done
           storage.saveProcessingProgress(clientId, 100);
