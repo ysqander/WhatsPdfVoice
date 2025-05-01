@@ -14,8 +14,8 @@ if (!fs.existsSync(tempDir)) {
 }
 
 // Regex patterns for parsing text chat
-const messageRegex = /^\[(\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2})\] ([^:]+): (.+)$/;
-const dateRegex = /(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/;
+const messageRegex = /^\[?(\d{2}\.\d{2}\.\d{2}),?\s*(\d{2}:\d{2}:\d{2})\]?\s+([^:]+):\s*(.*)$/;
+const dateRegex = /(\d{2})\.(\d{2})\.(\d{2}),?\s*(\d{2}):(\d{2}):(\d{2})/;
 
 // Parse WhatsApp chat export ZIP file
 export async function parse(filePath: string, options: ProcessingOptions): Promise<ChatExport> {
@@ -94,14 +94,16 @@ async function parseTextChat(filePath: string, extractDir: string, options: Proc
   for (const line of lines) {
     const match = line.match(messageRegex);
     if (match) {
-      const [, timestamp, sender, content] = match;
+      const [, date, time, sender, content] = match;
       
       // Parse timestamp to ISO format
-      const dateMatch = timestamp.match(dateRegex);
+      const dateMatch = (date + ", " + time).match(dateRegex);
       if (!dateMatch) continue;
       
       const [, day, month, year, hours, minutes, seconds] = dateMatch;
-      const isoTimestamp = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      // Assuming 20xx for two-digit year
+      const fullYear = `20${year}`;
+      const isoTimestamp = `${fullYear}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       
       participantsSet.add(sender);
       
