@@ -66,25 +66,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/whatsapp/process', uploadMiddleware, uploadController.processFile);
   app.get('/api/whatsapp/process-status', uploadController.getProcessStatus);
   app.get('/api/whatsapp/download', uploadController.downloadPdf);
-  
-  // Add PDF serving route
-  app.get('/api/whatsapp/pdf/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', filename);
-    
-    console.log('PDF request received:', {
-      filename,
-      pdfPath,
-      exists: fs.existsSync(pdfPath)
-    });
-    
-    if (!fs.existsSync(pdfPath)) {
-      console.error('PDF file not found:', pdfPath);
-      return res.status(404).json({ error: 'PDF not found' });
-    }
-    
-    res.sendFile(pdfPath);
-  });
 
   const httpServer = createServer(app);
 

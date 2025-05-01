@@ -264,14 +264,10 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
   }
 
   // Save PDF
-  console.log('Saving PDF document...');
   const pdfBytes = await pdfDoc.save();
   const pdfId = uuidv4();
   const pdfPath = path.join(pdfDir, `${pdfId}.pdf`);
-  console.log('Writing PDF to path:', pdfPath);
   fs.writeFileSync(pdfPath, pdfBytes);
-  console.log('PDF file written successfully');
-  console.log('PDF details:', { pdfId, pdfPath, size: pdfBytes.length });
 
   return { pdfPath, pdfId };
 }
