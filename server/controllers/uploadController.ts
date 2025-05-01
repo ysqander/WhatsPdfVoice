@@ -60,9 +60,16 @@ export const uploadController = {
       // Start processing in background
       process.nextTick(async () => {
         try {
+          console.log(`Starting background processing for clientId: ${clientId}`);
+          
           // Update progress: extraction starting
           storage.saveProcessingProgress(clientId, 5, ProcessingStep.EXTRACT_ZIP);
-          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 5, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
+          const client = clients.get(clientId);
+          if (!client) {
+            console.error(`No client found for clientId: ${clientId}`);
+            return;
+          }
+          client.write(`data: ${JSON.stringify({ progress: 5, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
           
           // Calculate file hash for verification
           const fileHash = await calculateFileHash(req.file!.path);
@@ -74,7 +81,12 @@ export const uploadController = {
           // Parse chat messages
           storage.saveProcessingProgress(clientId, 30, ProcessingStep.PARSE_MESSAGES);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 30, step: ProcessingStep.PARSE_MESSAGES })}\n\n`);
-          const chatData = await parse(req.file!.path, options);
+          console.log(`Starting parse for file: ${req.file!.path}`);
+          const chatData = await parse(req.file!.path, options).catch(error => {
+            console.error('Error parsing file:', error);
+            throw new Error(`Failed to parse file: ${error.message}`);
+          });
+          console.log('Parse completed successfully');
           chatData.fileHash = fileHash;
           chatData.originalFilename = req.file!.originalname;
           chatData.processingOptions = options;
