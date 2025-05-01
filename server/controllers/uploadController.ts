@@ -135,10 +135,7 @@ export const uploadController = {
           const pdfPath = await generatePdf(chatData);
           
           // Save PDF URL
-          const pdfUrl = typeof pdfPath === 'string' ? `/api/whatsapp/pdf/${path.basename(pdfPath)}` : null;
-          if (!pdfUrl) {
-            throw new Error('Failed to generate PDF path');
-          }
+          const pdfUrl = `/api/whatsapp/pdf/${path.basename(pdfPath)}`;
           await storage.savePdfUrl(savedChatExport.id!, pdfUrl);
           
           // Update progress: done
