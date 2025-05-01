@@ -62,15 +62,18 @@ export const uploadController = {
         try {
           // Update progress: extraction starting
           storage.saveProcessingProgress(clientId, 5, ProcessingStep.EXTRACT_ZIP);
+          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 5, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
           
           // Calculate file hash for verification
           const fileHash = await calculateFileHash(req.file!.path);
           
           // Parse the ZIP file and extract messages
           storage.saveProcessingProgress(clientId, 20, ProcessingStep.EXTRACT_ZIP);
+          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 20, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
           
           // Parse chat messages
           storage.saveProcessingProgress(clientId, 30, ProcessingStep.PARSE_MESSAGES);
+          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 30, step: ProcessingStep.PARSE_MESSAGES })}\n\n`);
           const chatData = await parse(req.file!.path, options);
           chatData.fileHash = fileHash;
           chatData.originalFilename = req.file!.originalname;
@@ -94,9 +97,11 @@ export const uploadController = {
           
           // Process voice messages
           storage.saveProcessingProgress(clientId, 60, ProcessingStep.CONVERT_VOICE);
+          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 60, step: ProcessingStep.CONVERT_VOICE })}\n\n`);
           
           // Generate PDF
           storage.saveProcessingProgress(clientId, 80, ProcessingStep.GENERATE_PDF);
+          clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 80, step: ProcessingStep.GENERATE_PDF })}\n\n`);
           const pdfPath = await generatePdf(chatData);
           
           // Save PDF URL
