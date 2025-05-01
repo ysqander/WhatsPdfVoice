@@ -57,9 +57,27 @@ export const uploadController = {
       const optionsStr = req.body.options || "{}";
       const options: ProcessingOptions = JSON.parse(optionsStr);
       
+      // Wait for client connection before starting processing
+      const waitForClient = new Promise<void>((resolve) => {
+        const checkClient = setInterval(() => {
+          if (clients.get(clientId)) {
+            clearInterval(checkClient);
+            resolve();
+          }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkClient);
+          resolve();
+        }, 5000);
+      });
+
       // Start processing in background
       process.nextTick(async () => {
         try {
+          console.log(`Waiting for SSE connection for clientId: ${clientId}`);
+          await waitForClient;
           console.log(`Starting background processing for clientId: ${clientId}`);
           
           // Update progress: extraction starting
