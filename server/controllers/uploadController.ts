@@ -27,9 +27,28 @@ export const uploadController = {
   // Process uploaded WhatsApp chat export ZIP file
   processFile: async (req: Request, res: Response) => {
     try {
+      console.log('Upload request received:', {
+        headers: req.headers,
+        contentType: req.headers['content-type'],
+        files: req.files,
+        file: req.file,
+        body: req.body
+      });
+
       if (!req.file) {
+        console.error('No file in request:', {
+          body: req.body,
+          isMultipart: req.headers['content-type']?.includes('multipart/form-data')
+        });
         return res.status(400).json({ message: "No file uploaded" });
       }
+
+      console.log('File details:', {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      });
       
       // Generate client ID for tracking processing status
       const clientId = uuidv4();

@@ -32,17 +32,38 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024, // 100MB limit
   },
   fileFilter: (_req, file, cb) => {
+    console.log('Multer processing file:', {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      fieldname: file.fieldname
+    });
+    
     if (file.mimetype === "application/zip" || file.originalname.endsWith('.zip')) {
       cb(null, true);
     } else {
+      console.error('File type rejected:', file.mimetype);
       cb(new Error('Only ZIP files are allowed'));
     }
   },
-});
+}).single('file');
+
+// Wrap multer middleware to handle errors
+const uploadMiddleware = (req: Request, res: Response, next: Function) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ message: `Upload error: ${err.message}` });
+    } else if (err) {
+      console.error('Unknown upload error:', err);
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
-  app.post('/api/whatsapp/process', upload.single('file'), uploadController.processFile);
+  app.post('/api/whatsapp/process', uploadMiddleware, uploadController.processFile);
   app.get('/api/whatsapp/process-status', uploadController.getProcessStatus);
   app.get('/api/whatsapp/download', uploadController.downloadPdf);
 
