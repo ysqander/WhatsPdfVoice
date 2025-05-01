@@ -63,6 +63,20 @@ export default function UploadSection({
       formData.append('file', file);
       formData.append('options', JSON.stringify(processingOptions));
       
+      // Make request with correct headers
+      const response = await fetch('/api/whatsapp/process', {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - browser will set it with boundary
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error processing file');
+      }
+      
+      const data = await response.json();
+      
       // Update processing steps
       const updateStep = (index: number, done: boolean) => {
         setProcessingSteps(prevSteps => 
