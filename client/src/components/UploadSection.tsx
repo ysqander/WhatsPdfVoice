@@ -124,9 +124,6 @@ export default function UploadSection({
         throw new Error('Error processing file');
       };
       
-      // Start processing
-      const response = await apiRequest('POST', '/api/whatsapp/process', formData);
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error processing file');
