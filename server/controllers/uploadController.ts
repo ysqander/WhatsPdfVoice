@@ -20,7 +20,7 @@ const calculateFileHash = (filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash('sha256');
     const stream = fs.createReadStream(filePath);
-    
+
     stream.on('error', err => reject(err));
     stream.on('data', chunk => hash.update(chunk));
     stream.on('end', () => resolve(hash.digest('hex')));
@@ -53,14 +53,14 @@ export const uploadController = {
         size: req.file.size,
         path: req.file.path
       });
-      
+
       // Generate client ID for tracking processing status
       const clientId = uuidv4();
-      
+
       // Parse processing options
       const optionsStr = req.body.options || "{}";
       const options: ProcessingOptions = JSON.parse(optionsStr);
-      
+
       // Wait for client connection before starting processing
       const waitForClient = new Promise<void>((resolve) => {
         const checkClient = setInterval(() => {
@@ -69,7 +69,7 @@ export const uploadController = {
             resolve();
           }
         }, 100);
-        
+
         // Timeout after 5 seconds
         setTimeout(() => {
           clearInterval(checkClient);
@@ -83,7 +83,7 @@ export const uploadController = {
           console.log(`Waiting for SSE connection for clientId: ${clientId}`);
           await waitForClient;
           console.log(`Starting background processing for clientId: ${clientId}`);
-          
+
           // Update progress: extraction starting
           storage.saveProcessingProgress(clientId, 5, ProcessingStep.EXTRACT_ZIP);
           const client = clients.get(clientId);
@@ -92,14 +92,14 @@ export const uploadController = {
             return;
           }
           client.write(`data: ${JSON.stringify({ progress: 5, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
-          
+
           // Calculate file hash for verification
           const fileHash = await calculateFileHash(req.file!.path);
-          
+
           // Parse the ZIP file and extract messages
           storage.saveProcessingProgress(clientId, 20, ProcessingStep.EXTRACT_ZIP);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 20, step: ProcessingStep.EXTRACT_ZIP })}\n\n`);
-          
+
           // Parse chat messages
           storage.saveProcessingProgress(clientId, 30, ProcessingStep.PARSE_MESSAGES);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 30, step: ProcessingStep.PARSE_MESSAGES })}\n\n`);
@@ -113,10 +113,10 @@ export const uploadController = {
           chatData.originalFilename = req.file!.originalname;
           // Convert processing options to string for storage
           chatData.processingOptions = JSON.stringify(options);
-          
+
           // Save chat export to storage
           const savedChatExport = await storage.saveChatExport(chatData);
-          
+
           // Save messages to storage
           for (const message of chatData.messages) {
             await storage.saveMessage({
@@ -129,54 +129,85 @@ export const uploadController = {
               duration: message.duration,
             });
           }
-          
+
           // Process and upload media files to R2
           storage.saveProcessingProgress(clientId, 60, ProcessingStep.CONVERT_VOICE);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 60, step: ProcessingStep.CONVERT_VOICE })}\n\n`);
-          
+
           // Verify R2 connection
           const r2Connected = await testR2Connection().catch(err => {
             console.error('Error connecting to R2:', err);
             return false;
           });
-          
+
           if (!r2Connected) {
             console.warn('R2 connection failed, using local storage for media files');
           } else {
             console.log('R2 connection successful, proceeding with media uploads');
-            
+
             // Get saved messages with media
             const messages = await storage.getMessagesByChatExportId(savedChatExport.id!);
             const mediaMessages = messages.filter(msg => 
               msg.mediaUrl && (msg.type === 'voice' || msg.type === 'image' || msg.type === 'attachment')
             );
-            
+
             console.log(`Found ${mediaMessages.length} media messages to upload to R2`);
-            
-            // Upload each media file to R2
-            for (const message of mediaMessages) {
+
+            // Upload voice messages first
+            const voiceMessages = mediaMessages.filter(msg => msg.type === 'voice');
+            console.log(`Processing ${voiceMessages.length} voice messages`);
+
+            for (const message of voiceMessages) {
               try {
                 if (!message.mediaUrl) continue;
-                
+
+                const mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', 
+                  savedChatExport.id!.toString(), path.basename(message.mediaUrl));
+
+                if (fs.existsSync(mediaPath)) {
+                  console.log(`Uploading voice message to R2: ${mediaPath}`);
+                  const mediaFile = await storage.uploadMediaToR2(
+                    mediaPath,
+                    'audio/ogg',
+                    savedChatExport.id!,
+                    message.id,
+                    'voice'
+                  );
+
+                  await storage.updateMessageMediaUrl(message.id, mediaFile.key, mediaFile.url!);
+                  console.log(`Uploaded voice message to R2, key: ${mediaFile.key}`);
+                } else {
+                  console.error(`Voice file not found: ${mediaPath}`);
+                }
+              } catch (error) {
+                console.error(`Error uploading voice message for message ${message.id}:`, error);
+              }
+            }
+
+            // Upload other media files
+            const otherMediaMessages = mediaMessages.filter(msg => msg.type !== 'voice');
+            console.log(`Processing ${otherMediaMessages.length} other media messages`);
+            for (const message of otherMediaMessages) {
+              try {
+                if (!message.mediaUrl) continue;
+
                 // Get the file path (mediaUrl currently points to local storage)
                 const mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', 
                   savedChatExport.id!.toString(), path.basename(message.mediaUrl));
-                
+
                 if (fs.existsSync(mediaPath)) {
                   console.log(`Uploading ${message.type} to R2: ${mediaPath}`);
-                  
+
                   // Determine content type
                   let contentType = 'application/octet-stream';
-                  if (message.type === 'voice') {
-                    contentType = 'audio/ogg';
-                  } else if (message.type === 'image') {
+                  if (message.type === 'image') {
                     const ext = path.extname(mediaPath).toLowerCase();
                     if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
                     else if (ext === '.png') contentType = 'image/png';
                     else if (ext === '.gif') contentType = 'image/gif';
                     else if (ext === '.webp') contentType = 'image/webp';
                   }
-                  
+
                   // Upload to R2
                   const mediaFile = await storage.uploadMediaToR2(
                     mediaPath,
@@ -185,7 +216,7 @@ export const uploadController = {
                     message.id,
                     message.type as any
                   );
-                  
+
                   // Update message with R2 URL
                   await storage.updateMessageMediaUrl(message.id, mediaFile.key, mediaFile.url!);
                   console.log(`Uploaded ${message.type} to R2, key: ${mediaFile.key}`);
@@ -196,19 +227,19 @@ export const uploadController = {
               }
             }
           }
-          
+
           // Update chatData with new media URLs before generating PDF
           const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
           chatData.messages = updatedMessages;
-          
+
           // Generate PDF
           console.log('Starting PDF generation for chat export:', savedChatExport.id);
           storage.saveProcessingProgress(clientId, 80, ProcessingStep.GENERATE_PDF);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 80, step: ProcessingStep.GENERATE_PDF })}\n\n`);
-          
+
           const pdfResult = await generatePdf(chatData);
           console.log('PDF generation completed:', pdfResult);
-          
+
           // Upload PDF to R2 if R2 is connected
           let pdfUrl = '';
           if (r2Connected) {
@@ -237,14 +268,14 @@ export const uploadController = {
             const pdfFileName = path.basename(pdfResult);
             pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
           }
-          
+
           console.log('Generated PDF URL:', pdfUrl);
           await storage.savePdfUrl(savedChatExport.id!, pdfUrl);
           console.log('PDF URL saved to storage for chat export:', savedChatExport.id);
-          
+
           // Update progress: done
           storage.saveProcessingProgress(clientId, 100);
-          
+
           // Notify connected client
           const clientRes = clients.get(clientId);
           if (clientRes) {
@@ -261,7 +292,7 @@ export const uploadController = {
             clientRes.end();
             clients.delete(clientId);
           }
-          
+
           // Cleanup
           if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
@@ -274,14 +305,14 @@ export const uploadController = {
             clientRes.end();
             clients.delete(clientId);
           }
-          
+
           // Cleanup
           if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
           }
         }
       });
-      
+
       // Return client ID for status tracking
       return res.status(200).json({ clientId });
     } catch (error) {
@@ -291,7 +322,7 @@ export const uploadController = {
       });
     }
   },
-  
+
   // Get processing status via Server-Sent Events
   getProcessStatus: (req: Request, res: Response) => {
     // Set headers for SSE
@@ -299,17 +330,17 @@ export const uploadController = {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
-    
+
     // Get client ID from query
     const clientId = req.query.clientId as string || uuidv4();
-    
+
     // Store client connection
     clients.set(clientId, res);
-    
+
     // Send initial progress
     const initialProgress = storage.getProcessingProgress(clientId);
     res.write(`data: ${JSON.stringify(initialProgress)}\n\n`);
-    
+
     // Setup interval to send updates
     const intervalId = setInterval(() => {
       const progress = storage.getProcessingProgress(clientId);
@@ -319,36 +350,36 @@ export const uploadController = {
         clearInterval(intervalId);
       }
     }, 1000);
-    
+
     // Handle client disconnect
     req.on('close', () => {
       clients.delete(clientId);
       clearInterval(intervalId);
     });
   },
-  
+
   // Download PDF
   downloadPdf: async (req: Request, res: Response) => {
     try {
       // Get the latest chat export
       const chatExport = await storage.getLatestChatExport();
-      
+
       if (!chatExport || !chatExport.pdfUrl) {
         return res.status(404).json({ message: "PDF not found" });
       }
-      
+
       // Extract file name from the URL
       const pdfFileName = path.basename(chatExport.pdfUrl);
       const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
-      
+
       if (!fs.existsSync(pdfPath)) {
         return res.status(404).json({ message: "PDF file not found" });
       }
-      
+
       // Set headers for download
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="WhatsApp_Chat_${new Date().toISOString().slice(0, 10)}.pdf"`);
-      
+
       // Stream the file
       const fileStream = fs.createReadStream(pdfPath);
       fileStream.pipe(res);
@@ -359,7 +390,7 @@ export const uploadController = {
       });
     }
   },
-  
+
   // Download Evidence ZIP (PDF + all referenced media files)
   downloadEvidenceZip: async (req: Request, res: Response) => {
     try {
@@ -368,22 +399,22 @@ export const uploadController = {
       if (isNaN(chatId)) {
         return res.status(400).json({ message: "Invalid chat ID" });
       }
-      
+
       const chatExport = await storage.getChatExport(chatId);
       if (!chatExport) {
         return res.status(404).json({ message: "Chat export not found" });
       }
-      
+
       if (!chatExport.pdfUrl) {
         return res.status(404).json({ message: "PDF not found for this chat" });
       }
-      
+
       // Temporary directory for the evidence package
       const tempDir = path.join(os.tmpdir(), 'whatspdf', 'evidence', chatId.toString());
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
-      
+
       // Create subdirectories for media types
       const voiceDir = path.join(tempDir, 'media', 'voice_messages');
       const imageDir = path.join(tempDir, 'media', 'images');
@@ -391,19 +422,19 @@ export const uploadController = {
       fs.mkdirSync(voiceDir, { recursive: true });
       fs.mkdirSync(imageDir, { recursive: true });
       fs.mkdirSync(otherDir, { recursive: true });
-      
+
       // Get all media files for this chat export
       const mediaFiles = await storage.getMediaFilesByChat(chatId);
-      
+
       // Get PDF path - could be from local storage or R2
       let pdfPath = '';
-      
+
       if (chatExport.pdfUrl.startsWith('http')) {
         // PDF is in R2
         const pdfFile = mediaFiles.find(file => file.type === 'pdf');
         if (pdfFile) {
           pdfPath = path.join(tempDir, 'Chat_Transcript.pdf');
-          
+
           // Download the PDF from the URL
           try {
             const pdfResponse = await fetch(pdfFile.url);
@@ -424,18 +455,18 @@ export const uploadController = {
         // PDF is in local storage
         const pdfFileName = path.basename(chatExport.pdfUrl);
         pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
-        
+
         if (!fs.existsSync(pdfPath)) {
           return res.status(404).json({ message: "PDF file not found in local storage" });
         }
       }
-      
+
       // Get all messages with media references
       const messages = await storage.getMessagesByChatExportId(chatId);
       const mediaMessages = messages.filter(message => 
         message.mediaUrl && (message.type === 'voice' || message.type === 'image' || message.type === 'attachment')
       );
-      
+
       // Download media files from R2 if needed
       const downloadPromises = mediaFiles
         .filter(file => file.type !== 'pdf') // Exclude PDF as we've already handled it
@@ -444,11 +475,11 @@ export const uploadController = {
           let targetDir = otherDir;
           if (file.type === 'voice') targetDir = voiceDir;
           if (file.type === 'image') targetDir = imageDir;
-          
+
           // Create a filename from the key (removing directory path)
           const fileName = path.basename(file.key);
           const filePath = path.join(targetDir, fileName);
-          
+
           try {
             // Download file from R2
             const response = await fetch(file.url);
@@ -464,58 +495,58 @@ export const uploadController = {
             return { success: false, path: null, type: file.type, name: fileName };
           }
         });
-      
+
       // Wait for all downloads to complete
       const downloadResults = await Promise.all(downloadPromises);
       const successfulDownloads = downloadResults.filter(result => result.success);
       console.log(`Downloaded ${successfulDownloads.length} of ${downloadResults.length} media files for evidence zip`);
-      
+
       // If we have local media files, include those too
       const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media', chatId.toString());
       if (fs.existsSync(mediaDir)) {
         // Copy local media files to the evidence directory
         const copyLocalMedia = (message: any) => {
           if (!message.mediaUrl) return;
-          
+
           // Skip R2 URLs
           if (message.mediaUrl.startsWith('http')) return;
-          
+
           const mediaFileName = path.basename(message.mediaUrl);
           const mediaPath = path.join(mediaDir, mediaFileName);
-          
+
           if (fs.existsSync(mediaPath)) {
             let targetDir = otherDir;
             if (message.type === 'voice') targetDir = voiceDir;
             if (message.type === 'image') targetDir = imageDir;
-            
+
             const targetPath = path.join(targetDir, mediaFileName);
             fs.copyFileSync(mediaPath, targetPath);
             console.log(`Copied local media file: ${mediaFileName}`);
           }
         };
-        
+
         mediaMessages.forEach(copyLocalMedia);
       }
-      
+
       // Set headers for download
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="WhatsApp_Evidence_${chatId}_${new Date().toISOString().slice(0, 10)}.zip"`);
-      
+
       // Create zip archive
       const archive = archiver('zip', {
         zlib: { level: 9 } // Maximum compression
       });
-      
+
       // Pipe archive to response
       archive.pipe(res);
-      
+
       // Add PDF to archive
       archive.file(pdfPath, { name: `Chat_Transcript.pdf` });
-      
+
       // Add media files to archive by walking the directory
       const walkDir = (dir: string, zipPath: string) => {
         if (!fs.existsSync(dir)) return;
-        
+
         const files = fs.readdirSync(dir);
         for (const file of files) {
           const filePath = path.join(dir, file);
@@ -525,11 +556,11 @@ export const uploadController = {
           }
         }
       };
-      
+
       walkDir(voiceDir, 'media/voice_messages');
       walkDir(imageDir, 'media/images');
       walkDir(otherDir, 'media/other');
-      
+
       // Add a manifest file with metadata
       const manifest = {
         caseReference: `WA-${format(new Date(), "yyyyMMdd-HHmm")}`,
@@ -545,10 +576,10 @@ export const uploadController = {
         },
         originalFilename: chatExport.originalFilename
       };
-      
+
       // Add manifest.json to the archive
       archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
-      
+
       // Add a README.txt file with instructions
       const readme = `EVIDENCE PACKAGE - WHATSAPP CHAT EXPORT
 ===============================
@@ -569,12 +600,12 @@ For court submissions:
 
 Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
 `;
-      
+
       archive.append(readme, { name: 'README.txt' });
-      
+
       // Finalize archive
       await archive.finalize();
-      
+
       // Clean up the temp directory after a delay
       setTimeout(() => {
         try {
@@ -584,9 +615,9 @@ Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
           console.error(`Error cleaning up temp directory ${tempDir}:`, err);
         }
       }, 60000); // 1 minute delay
-      
+
       console.log(`Evidence ZIP created for chat ID ${chatId}`);
-      
+
     } catch (error) {
       console.error('Evidence ZIP error:', error);
       return res.status(500).json({
