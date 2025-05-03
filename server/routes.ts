@@ -66,6 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/whatsapp/process', uploadMiddleware, uploadController.processFile);
   app.get('/api/whatsapp/process-status', uploadController.getProcessStatus);
   app.get('/api/whatsapp/download', uploadController.downloadPdf);
+  app.get('/api/whatsapp/evidence-zip/:chatId', uploadController.downloadEvidenceZip);
   
   // Add PDF serving route
   app.get('/api/whatsapp/pdf/:filename', (req, res) => {
@@ -84,6 +85,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.sendFile(pdfPath);
+  });
+  
+  // Add media files serving route - for voice messages and other referenced media
+  app.get('/media/:chatId/:filename', (req, res) => {
+    const { chatId, filename } = req.params;
+    const mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', chatId, filename);
+    
+    console.log('Media request received:', {
+      chatId,
+      filename,
+      mediaPath,
+      exists: fs.existsSync(mediaPath)
+    });
+    
+    if (!fs.existsSync(mediaPath)) {
+      console.error('Media file not found:', mediaPath);
+      return res.status(404).json({ error: 'Media file not found' });
+    }
+    
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream'; // Default
+    
+    if (ext === '.ogg' || ext === '.oga') {
+      contentType = 'audio/ogg';
+    } else if (ext === '.mp3') {
+      contentType = 'audio/mpeg';
+    } else if (ext === '.m4a') {
+      contentType = 'audio/mp4';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    } else if (ext === '.png') {
+      contentType = 'image/png';
+    } else if (ext === '.gif') {
+      contentType = 'image/gif';
+    } else if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    }
+    
+    // Set appropriate headers and send file
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.sendFile(mediaPath);
   });
 
   const httpServer = createServer(app);

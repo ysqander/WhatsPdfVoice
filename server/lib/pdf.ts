@@ -257,22 +257,20 @@ async function generatePdfWithPdfLib(
           const linkEndX = linkX + linkWidth;
           const linkEndY = linkY + linkHeight;
                     
-          pdfDoc.addPage(); // This is temporary
-          const tempPage = pdfDoc.removePage(pdfDoc.getPageCount() - 1); // Remove it
+          // For PDFLib, we'll embed a URL reference in the text itself
+          // Since direct link annotations are more complex, we'll simplify by using a special format
+          // that indicates the media file location for the Evidence ZIP feature later
           
-          // Add hyperlink using the URI action
+          // Add a special identifier before voice message
           const mediaUrl = `/media/${chatData.id}/${mediaFileId}`;
-          currentPage.node.addAnnot({
-            Type: 'Annot',
-            Subtype: 'Link',
-            Rect: [linkX, linkY, linkEndX, linkEndY],
-            Border: [0, 0, 0],
-            C: [0, 0, 1], // RGB color for border - blue
-            A: {
-              Type: 'Action',
-              S: 'URI',
-              URI: PDFString.of(mediaUrl),
-            },
+          
+          // This text will be used to identify the voice message link when creating the evidence ZIP
+          currentPage.drawText("(See voice note at: " + mediaUrl + ")", {
+            x: margin + 20,
+            y: y - 15,
+            size: 8,
+            font: timesRomanFont,
+            color: rgb(0.5, 0.5, 0.5),
           });
         } else {
           // Fallback for voice messages without a media URL
