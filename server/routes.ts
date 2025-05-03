@@ -7,6 +7,7 @@ import fs from "fs";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { uploadController } from "./controllers/uploadController";
+import mediaRouter from "./mediaRouter";
 
 // Setup temporary upload directory
 const tempDir = path.join(os.tmpdir(), 'whatspdf-uploads');
@@ -62,6 +63,9 @@ const uploadMiddleware = (req: Request, res: Response, next: Function) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register the media router for proxy endpoints
+  app.use(mediaRouter);
+  
   // API routes
   app.post('/api/whatsapp/process', uploadMiddleware, uploadController.processFile);
   app.get('/api/whatsapp/process-status', uploadController.getProcessStatus);

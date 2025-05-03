@@ -1,5 +1,5 @@
 import { ChatExport, Message } from "@shared/types";
-import { PDFDocument, StandardFonts, rgb, PDFName, PDFArray } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFString } from "pdf-lib";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import puppeteer from "puppeteer";
 import { v4 as uuidv4 } from "uuid";
 import { getSignedR2Url } from "./r2Storage";
+import { storage } from "../storage";
 
 // Create PDF directory if it doesn't exist
 const pdfDir = path.join(os.tmpdir(), "whatspdf", "pdfs");
