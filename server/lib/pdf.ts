@@ -257,6 +257,14 @@ async function generatePdfWithPdfLib(
           let messageId: string | number | undefined;
           let proxyUrl: string;
           
+          // Determine the base URL of our application for absolute URLs
+          // In Replit, we can use REPLIT_DOMAINS or fallback to localhost
+          const appBaseUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS}`
+            : 'http://localhost:5000'; // Fallback for local development
+          
+          console.log(`Using app base URL: ${appBaseUrl}`);
+          
           // If this is an R2 URL, extract the mediaId from our storage
           if (message.id) {
             messageId = message.id;
@@ -266,14 +274,24 @@ async function generatePdfWithPdfLib(
             
             if (mediaFile) {
               // Use our proxy endpoint which will generate fresh signed URLs on demand
-              proxyUrl = `/api/media/proxy/${mediaFile.id}`;
+              // Using absolute URL that includes the hostname
+              proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaFile.id}`;
+              console.log(`Generated proxy URL for voice message: ${proxyUrl}`);
             } else {
-              // Fallback - use the original media URL as a local path
-              proxyUrl = message.mediaUrl;
+              // Fallback - try to make the original media URL absolute if it's relative
+              if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+                proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
+              } else {
+                proxyUrl = message.mediaUrl || '';
+              }
             }
           } else {
-            // Fallback - use the original media URL as a local path
-            proxyUrl = message.mediaUrl;
+            // Fallback - try to make the original media URL absolute if it's relative
+            if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+              proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
+            } else {
+              proxyUrl = message.mediaUrl || '';
+            }
           }
 
           // Create and register the annotation with correct structure using PDFName and PDFString
