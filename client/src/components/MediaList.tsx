@@ -58,10 +58,10 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
       setLoading(true);
       setError(null);
       
-      const response = await apiRequest({
-        url: `/api/media/session/${sessionId}`,
-        method: "GET",
-      });
+      const response = await apiRequest(
+        "GET",
+        `/api/media/session/${sessionId}`
+      );
       
       if (response && typeof response === 'object' && 'media' in response) {
         setMediaFiles(response.media as MediaFile[] || []);
@@ -82,10 +82,10 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
     try {
       setDeleting(prev => ({ ...prev, [mediaId]: true }));
       
-      await apiRequest({
-        url: `/api/media/${mediaId}`,
-        method: "DELETE",
-      });
+      await apiRequest(
+        "DELETE",
+        `/api/media/${mediaId}`
+      );
       
       // Remove the deleted file from the state
       setMediaFiles(prev => prev.filter(file => file.id !== mediaId));
@@ -138,12 +138,12 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
     }
   };
 
-  // Load media files on component mount or chatId change
+  // Load media files on component mount or sessionId change
   useEffect(() => {
-    if (chatId) {
+    if (sessionId) {
       fetchMediaFiles();
     }
-  }, [chatId]);
+  }, [sessionId]);
 
   // Show loading state
   if (loading && mediaFiles.length === 0) {
@@ -169,7 +169,7 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
   if (mediaFiles.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">
-        No media files found for this chat.
+        No media files found for this session.
       </div>
     );
   }
