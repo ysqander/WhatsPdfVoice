@@ -1,115 +1,25 @@
 import { db } from "./db";
-import { v4 as uuidv4 } from "uuid";
-import path from "path";
-import fs from "fs";
-import { eq, and, desc } from "drizzle-orm";
-import { 
-  type ChatExport, 
-  type Message, 
-  type InsertChatExport, 
-  type InsertMessage,
-  type MediaFile,
-  chatExports,
-  messages,
+import {
   mediaFiles,
-  processingProgress
+  processingProgress,
+  MediaFile,
+  InsertMediaFile
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { ProcessingOptions } from "@shared/types";
+import { eq, desc, sql } from "drizzle-orm";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 import { getSignedR2Url, uploadFileToR2, deleteFileFromR2 } from "./lib/r2Storage";
 
+// Helper function to calculate expiration date
+const calculateExpirationDate = (months = 3) => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
+  return date;
+};
+
 export class DatabaseStorage implements IStorage {
-  /**
-   * Save a chat export
-   */
-  async saveChatExport(data: InsertChatExport): Promise<ChatExport> {
-    // For database insertion, ensure processingOptions is a string
-    const insertData = {
-      ...data,
-      processingOptions: typeof data.processingOptions === 'string' 
-        ? data.processingOptions 
-        : JSON.stringify(data.processingOptions)
-    };
-    
-    const [chatExport] = await db
-      .insert(chatExports)
-      .values(insertData)
-      .returning();
-    
-    // For the return value, ensure processingOptions is an object
-    return {
-      ...chatExport,
-      processingOptions: typeof chatExport.processingOptions === 'string'
-        ? JSON.parse(chatExport.processingOptions)
-        : chatExport.processingOptions
-    };
-  }
-
-  /**
-   * Get a chat export by ID
-   */
-  async getChatExport(id: number): Promise<ChatExport | undefined> {
-    const [chatExport] = await db
-      .select()
-      .from(chatExports)
-      .where(eq(chatExports.id, id));
-    
-    if (!chatExport) return undefined;
-    
-    return {
-      ...chatExport,
-      // Ensure processingOptions is an object
-      processingOptions: typeof chatExport.processingOptions === 'string'
-        ? JSON.parse(chatExport.processingOptions)
-        : chatExport.processingOptions
-    };
-  }
-
-  /**
-   * Save a message
-   */
-  async saveMessage(message: InsertMessage): Promise<Message> {
-    const [savedMessage] = await db
-      .insert(messages)
-      .values(message)
-      .returning();
-    
-    return savedMessage;
-  }
-
-  /**
-   * Get messages by chat export ID
-   */
-  async getMessagesByChatExportId(chatExportId: number): Promise<Message[]> {
-    const messagesList = await db
-      .select()
-      .from(messages)
-      .where(eq(messages.chatExportId, chatExportId));
-    
-    return messagesList;
-  }
-
-  /**
-   * Get the latest chat export
-   */
-  async getLatestChatExport(): Promise<ChatExport | undefined> {
-    const [chatExport] = await db
-      .select()
-      .from(chatExports)
-      .orderBy(desc(chatExports.generatedAt))
-      .limit(1);
-    
-    if (!chatExport) return undefined;
-    
-    return {
-      ...chatExport,
-      // Ensure processingOptions is an object
-      processingOptions: typeof chatExport.processingOptions === 'string'
-        ? JSON.parse(chatExport.processingOptions)
-        : chatExport.processingOptions
-    };
-  }
-
   /**
    * Save processing progress
    */
@@ -151,25 +61,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Save PDF URL for chat export
-   */
-  async savePdfUrl(chatExportId: number, pdfUrl: string): Promise<void> {
-    await db
-      .update(chatExports)
-      .set({ pdfUrl })
-      .where(eq(chatExports.id, chatExportId));
-  }
-
-  /**
    * Upload media to R2 and save to database
+   * This method will store media files needed for the PDF but not save any private chat data
    */
   async uploadMediaToR2(
     filePath: string, 
     contentType: string, 
-    chatExportId: number, 
-    messageId?: number, 
+    sessionId: number, // We use this as a grouping ID but don't store chat contents
+    messageRef?: number, // Optional reference for organization/grouping
     type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment',
-    expiresIn?: number
+    expiresIn?: number,
+    retentionMonths: number = 6 // Default retention period
   ): Promise<MediaFile> {
     try {
       // Get file stats for size
@@ -183,7 +85,7 @@ export class DatabaseStorage implements IStorage {
       
       const fileName = originalName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
       const uniqueSuffix = uuidv4();
-      const key = `chats/${chatExportId}/${typeFolder}/${fileName.replace(/\s+/g, '_')}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`;
+      const key = `media/${sessionId}/${typeFolder}/${fileName.replace(/\s+/g, '_')}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`;
       
       // Upload file to R2
       await uploadFileToR2(filePath, contentType, key);
@@ -192,22 +94,24 @@ export class DatabaseStorage implements IStorage {
       // Get signed URL (this will expire, but our proxy system will handle that)
       const url = await getSignedR2Url(key, expiresIn);
       
+      // Set expiration date for automatic cleanup
+      const expiresAt = calculateExpirationDate(retentionMonths);
+      
       // Create media file record in database
       const [mediaFile] = await db
         .insert(mediaFiles)
         .values({
           key,
-          chatExportId,
-          messageId,
           originalName,
           contentType,
           size: stats.size,
           url,
-          type
+          type,
+          expiresAt
         })
         .returning();
       
-      console.log(`Uploaded media file to R2: ${key}`);
+      console.log(`Uploaded media file to R2: ${key} (expires: ${expiresAt.toISOString()})`);
       return mediaFile;
     } catch (error) {
       console.error("Error uploading media to R2:", error);
@@ -227,6 +131,11 @@ export class DatabaseStorage implements IStorage {
       
     if (!mediaFile) {
       throw new Error(`Media file with ID ${mediaId} not found`);
+    }
+    
+    // Check if the media has expired
+    if (mediaFile.expiresAt && new Date() > mediaFile.expiresAt) {
+      throw new Error(`Media file with ID ${mediaId} has expired`);
     }
     
     // Generate a fresh signed URL with a new expiration
@@ -264,31 +173,11 @@ export class DatabaseStorage implements IStorage {
         .delete(mediaFiles)
         .where(eq(mediaFiles.id, mediaId));
       
-      // If this media file is associated with a message, update the message
-      if (mediaFile.messageId) {
-        await db
-          .update(messages)
-          .set({ mediaUrl: null })
-          .where(eq(messages.id, mediaFile.messageId));
-      }
-      
       return true;
     } catch (error) {
       console.error(`Error deleting media file ${mediaId}:`, error);
       return false;
     }
-  }
-
-  /**
-   * Get all media files for a chat export
-   */
-  async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
-    const mediaFilesList = await db
-      .select()
-      .from(mediaFiles)
-      .where(eq(mediaFiles.chatExportId, chatExportId));
-    
-    return mediaFilesList;
   }
 
   /**
@@ -302,84 +191,69 @@ export class DatabaseStorage implements IStorage {
     
     return mediaFile;
   }
-
+  
   /**
-   * Update a message with R2 media URL
+   * Clean up expired media files
+   * This should be called periodically via a cron job
    */
-  async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
-    // Determine the base URL of our application for absolute URLs
-    const appBaseUrl = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS}`
-      : 'http://localhost:5000';
-    
-    // Find existing media for this message
-    const [existingMedia] = await db
+  async cleanupExpiredMedia(): Promise<number> {
+    // Find all expired media files
+    const expiredFiles = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.messageId, messageId));
+      .where(sql`${mediaFiles.expiresAt} IS NOT NULL AND ${mediaFiles.expiresAt} < NOW()`);
     
-    let mediaId: string;
+    let deletedCount = 0;
     
-    if (!existingMedia) {
-      // Get the message to determine the content type and media type
-      const [message] = await db
-        .select()
-        .from(messages)
-        .where(eq(messages.id, messageId));
-      
-      if (!message) {
-        throw new Error(`Message with ID ${messageId} not found`);
+    // Delete each expired file
+    for (const file of expiredFiles) {
+      try {
+        await deleteFileFromR2(file.key);
+        
+        await db
+          .delete(mediaFiles)
+          .where(eq(mediaFiles.id, file.id));
+        
+        deletedCount++;
+        console.log(`Cleaned up expired media file: ${file.id} (${file.key})`);
+      } catch (error) {
+        console.error(`Error cleaning up expired media file ${file.id}:`, error);
       }
-      
-      let contentType = "application/octet-stream";
-      let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment';
-      
-      // Determine content type and type from message
-      if (message.type === 'voice') {
-        contentType = "audio/ogg";
-        type = 'voice';
-      } else if (message.type === 'image') {
-        contentType = "image/jpeg";
-        type = 'image';
-      }
-      
-      // Create a new media file record
-      const [mediaFile] = await db
-        .insert(mediaFiles)
-        .values({
-          key: r2Key,
-          chatExportId: message.chatExportId,
-          messageId,
-          originalName: path.basename(r2Key),
-          contentType,
-          size: 0, // We don't know the size
-          url: r2Url,
-          type
-        })
-        .returning();
-      
-      mediaId = mediaFile.id;
-    } else {
-      mediaId = existingMedia.id;
-      
-      // Update the existing media file with the new URL
-      await db
-        .update(mediaFiles)
-        .set({ 
-          key: r2Key,
-          url: r2Url
-        })
-        .where(eq(mediaFiles.id, mediaId));
     }
     
-    // Create a proxy URL that points to our server
-    const proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`;
-    console.log(`Setting message ${messageId} media URL to proxy: ${proxyUrl}`);
-    
-    // Update the message with the proxy URL
-    await db
-      .update(messages)
-      .set({ mediaUrl: proxyUrl })
-      .where(eq(messages.id, messageId));
+    return deletedCount;
+  }
+  
+  // Provide stubs for the IStorage interface methods that we're not using anymore
+  async saveChatExport() {
+    throw new Error("Method not supported: saveChatExport - We no longer store chat data for privacy reasons");
+  }
+  
+  async getChatExport() {
+    throw new Error("Method not supported: getChatExport - We no longer store chat data for privacy reasons");
+  }
+  
+  async saveMessage() {
+    throw new Error("Method not supported: saveMessage - We no longer store message data for privacy reasons");
+  }
+  
+  async getMessagesByChatExportId() {
+    throw new Error("Method not supported: getMessagesByChatExportId - We no longer store message data for privacy reasons");
+  }
+  
+  async getLatestChatExport() {
+    throw new Error("Method not supported: getLatestChatExport - We no longer store chat data for privacy reasons");
+  }
+  
+  async savePdfUrl() {
+    throw new Error("Method not supported: savePdfUrl - We no longer store PDF data for privacy reasons");
+  }
+  
+  async getMediaFilesByChat() {
+    throw new Error("Method not supported: getMediaFilesByChat - We no longer store chat data for privacy reasons");
+  }
+  
+  async updateMessageMediaUrl() {
+    throw new Error("Method not supported: updateMessageMediaUrl - We no longer store message data for privacy reasons");
   }
 }
