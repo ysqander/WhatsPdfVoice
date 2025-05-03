@@ -1,5 +1,5 @@
 import { ChatExport, Message } from "@shared/types";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFName } from "pdf-lib";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -251,9 +251,9 @@ async function generatePdfWithPdfLib(
           const linkX = margin + 20;
           const linkY = y - 2;
           
-          // Add clickable link annotation
-          currentPage.node.setAnnot(
-            currentPage.doc.context.obj({
+          // Create and register the annotation
+          const linkAnnotation = pdfDoc.context.register(
+            pdfDoc.context.obj({
               Type: 'Annot',
               Subtype: 'Link',
               Rect: [linkX, linkY, linkX + textWidth, linkY + linkHeight],
@@ -264,6 +264,12 @@ async function generatePdfWithPdfLib(
                 URI: message.mediaUrl,
               }
             })
+          );
+
+          // Attach it to the page
+          currentPage.node.set(
+            PDFName.of('Annots'),
+            pdfDoc.context.obj([linkAnnotation])
           );
 
           // Add reference text for evidence ZIP
