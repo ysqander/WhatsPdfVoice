@@ -6,6 +6,7 @@ import os from "os";
 import { format } from "date-fns";
 import puppeteer from "puppeteer";
 import { v4 as uuidv4 } from "uuid";
+import { getSignedR2Url } from "./r2Storage";
 
 // Create PDF directory if it doesn't exist
 const pdfDir = path.join(os.tmpdir(), "whatspdf", "pdfs");
@@ -251,6 +252,12 @@ async function generatePdfWithPdfLib(
           const linkX = margin + 20;
           const linkY = y - 2;
           
+          // Generate a longer-lived signed URL for PDF links (24 hours)
+          const pdfSignedUrl = await getSignedR2Url(
+            path.basename(message.mediaUrl),
+            60 * 60 * 24 // 24 hours
+          );
+
           // Create and register the annotation with correct structure
           const linkAnnotationRef = pdfDoc.context.register(
             pdfDoc.context.obj({
@@ -261,7 +268,7 @@ async function generatePdfWithPdfLib(
               A: {
                 Type: 'Action',
                 S: 'URI',
-                URI: pdfDoc.context.obj(message.mediaUrl)
+                URI: pdfDoc.context.obj(pdfSignedUrl)
               }
             })
           );
