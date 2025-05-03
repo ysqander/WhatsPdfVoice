@@ -80,23 +80,50 @@ export default function PreviewSection({
           />
         </div>
         
-        {/* Zoom controls */}
-        <div className="p-2 bg-gray-50 border-t border-gray-200 flex justify-center items-center space-x-4">
-          <button 
-            className="text-gray-600 hover:text-primary transition-colors" 
-            title="Zoom Out"
-            onClick={handleZoomOut}
-          >
-            <SquareMinus size={16} />
-          </button>
-          <span className="text-sm">{zoomLevel}%</span>
-          <button 
-            className="text-gray-600 hover:text-primary transition-colors" 
-            title="Zoom In"
-            onClick={handleZoomIn}
-          >
-            <SearchCode size={16} />
-          </button>
+        {/* Zoom controls and download buttons */}
+        <div className="p-2 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <button 
+              className="text-gray-600 hover:text-primary transition-colors" 
+              title="Zoom Out"
+              onClick={handleZoomOut}
+            >
+              <SquareMinus size={16} />
+            </button>
+            <span className="text-sm">{zoomLevel}%</span>
+            <button 
+              className="text-gray-600 hover:text-primary transition-colors" 
+              title="Zoom In"
+              onClick={handleZoomIn}
+            >
+              <SearchCode size={16} />
+            </button>
+          </div>
+          
+          {isFileProcessed && chatData?.id && (
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => window.open(pdfUrl || '', '_blank')}
+                disabled={!pdfUrl}
+              >
+                <Download className="mr-1 h-3 w-3" />
+                PDF
+              </Button>
+              
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs bg-accent hover:bg-accent/90"
+                onClick={() => window.open(`/api/whatsapp/evidence-zip/${chatData.id}`, '_blank')}
+              >
+                <Archive className="mr-1 h-3 w-3" />
+                Evidence ZIP
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
