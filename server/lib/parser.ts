@@ -1,3 +1,4 @@
+
 import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
@@ -13,9 +14,21 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Regex patterns for parsing text chat
-const messageRegex = /^\[(\d{2}\.\d{2}\.\d{2}),\s*(\d{2}:\d{2}:\d{2})\]\s+([^:]+):\s*(.*)$/;
-const dateRegex = /(\d{2})\.(\d{2})\.(\d{2}),\s*(\d{2}):(\d{2}):(\d{2})/;
+// Find chat file by recursing and testing for timestamp pattern
+function findChatFile(dir: string): string | undefined {
+  for (const name of fs.readdirSync(dir)) {
+    const p = path.join(dir, name);
+    if (fs.statSync(p).isDirectory()) {
+      const found = findChatFile(p);
+      if (found) return found;
+    } else if (name.toLowerCase().endsWith('.txt')) {
+      const firstChunk = fs.readFileSync(p, 'utf8').slice(0, 500);
+      if (/\[\d{2}\.\d{2}\.\d{2},\s*\d{2}:\d{2}:\d{2}\]/.test(firstChunk)) {
+        return p;
+      }
+    }
+  }
+}
 
 // Parse WhatsApp chat export ZIP file
 export async function parse(filePath: string, options: ProcessingOptions): Promise<ChatExport> {
@@ -30,20 +43,16 @@ export async function parse(filePath: string, options: ProcessingOptions): Promi
     const zip = new AdmZip(filePath);
     zip.extractAllTo(extractDir, true);
     
-    // Check for text chat vs database format
-    const files = fs.readdirSync(extractDir);
-    
-    // Find the chat text file (_chat.txt)
-    const chatFile = files.find(file => file.endsWith('_chat.txt') || file === 'chat.txt');
-    // Check for SQLite database
-    const dbFile = files.find(file => file === 'msgstore.db');
+    // Find chat file or database
+    const chatFilePath = findChatFile(extractDir);
+    const dbFile = fs.readdirSync(extractDir).find(file => file === 'msgstore.db');
     
     let messages: Message[] = [];
     let participants: string[] = [];
     
-    if (chatFile) {
+    if (chatFilePath) {
       // Parse text chat file
-      const { parsedMessages, parsedParticipants } = await parseTextChat(path.join(extractDir, chatFile), extractDir, options);
+      const { parsedMessages, parsedParticipants } = await parseTextChat(chatFilePath, extractDir, options);
       messages = parsedMessages;
       participants = parsedParticipants;
     } else if (dbFile) {
@@ -85,84 +94,87 @@ export async function parse(filePath: string, options: ProcessingOptions): Promi
 
 // Parse text chat file
 async function parseTextChat(filePath: string, extractDir: string, options: ProcessingOptions): Promise<{ parsedMessages: Message[], parsedParticipants: string[] }> {
-  const chatText = fs.readFileSync(filePath, 'utf8');
-  const lines = chatText.split('\n');
-  
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const lines = raw.split(/\r?\n/);
+
+  const messageRegex = /^\s*\[(\d{2}\.\d{2}\.\d{2}),\s*(\d{2}:\d{2}:\d{2})\]\s*([^:]+):\s*(.*)$/;
+  const attachmentRegex = /<attached:\s*([^>]+)>/i;
   const parsedMessages: Message[] = [];
-  const participantsSet = new Set<string>();
-  
-  for (const line of lines) {
-    const match = line.match(messageRegex);
-    if (match) {
-      const [, date, time, sender, content] = match;
-      
-      // Parse timestamp to ISO format
-      const dateMatch = (date + ", " + time).match(dateRegex);
-      if (!dateMatch) continue;
-      
-      const [, day, month, year, hours, minutes, seconds] = dateMatch;
-      // Assuming 20xx for two-digit year
-      const fullYear = `20${year}`;
-      const isoTimestamp = `${fullYear}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-      
-      participantsSet.add(sender);
-      
-      // Determine message type
-      let messageType: Message['type'] = 'text';
-      let mediaUrl: string | undefined;
-      let duration: number | undefined;
-      
-      if (content.includes('‎<attached: ')) {
-        const attachmentMatch = content.match(/‎<attached: ([^>]+)>/);
-        if (attachmentMatch) {
-          const attachmentName = attachmentMatch[1];
-          
-          // Look for the file in the extracted directory
-          const attachmentPath = findAttachment(extractDir, attachmentName);
-          
-          if (attachmentPath) {
-            // Determine file type
-            if (attachmentPath.match(/\.(opus|m4a|mp3|ogg)$/i) && options.includeVoiceMessages) {
-              messageType = 'voice';
-              mediaUrl = `/media/${path.basename(attachmentPath)}`;
-              // For voice messages, estimate duration (could be extracted from the file)
-              duration = 30; // Default to 30 seconds
-            } else if (attachmentPath.match(/\.(jpg|jpeg|png|gif)$/i) && options.includeImages) {
-              messageType = 'image';
-              mediaUrl = `/media/${path.basename(attachmentPath)}`;
-            } else if (options.includeAttachments) {
-              messageType = 'attachment';
-              mediaUrl = `/media/${path.basename(attachmentPath)}`;
-            } else {
-              // Skip this attachment if not included in options
-              continue;
-            }
+  let lastMsg: Message | null = null;
+  const participants = new Set<string>();
+
+  for (let line of lines) {
+    // strip BOM and directional marks
+    line = line.replace(/^[\uFEFF]/, '').replace(/[\u200E\u200F]/g, '').trimEnd();
+
+    const m = line.match(messageRegex);
+    if (m) {
+      const [, date, time, sender, rawContent] = m;
+      // build ISO timestamp
+      const [d, mo, y] = date.split('.');
+      const iso = `20${y}-${mo}-${d}T${time}`;
+
+      participants.add(sender);
+
+      // determine type
+      let type: Message['type'] = 'text';
+      let content: string = rawContent;
+      let mediaUrl: string|undefined, duration: number|undefined;
+
+      const att = rawContent.match(attachmentRegex);
+      if (att) {
+        const name = att[1];
+        const found = findAttachment(extractDir, name);
+        if (found) {
+          if (found.match(/\.(opus|m4a|mp3|ogg)$/i) && options.includeVoiceMessages) {
+            type = 'voice';
+            mediaUrl = `/media/${path.basename(found)}`;
+            duration = 30;
+            content = mediaUrl;
             
             // Copy the file to the media directory
             const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media');
             if (!fs.existsSync(mediaDir)) {
               fs.mkdirSync(mediaDir, { recursive: true });
             }
+            fs.copyFileSync(found, path.join(mediaDir, path.basename(found)));
+          } else if (found.match(/\.(jpg|jpeg|png|gif)$/i) && options.includeImages) {
+            type = 'image';
+            mediaUrl = `/media/${path.basename(found)}`;
+            content = mediaUrl;
             
-            fs.copyFileSync(attachmentPath, path.join(mediaDir, path.basename(attachmentPath)));
+            // Copy the file to the media directory
+            const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media');
+            if (!fs.existsSync(mediaDir)) {
+              fs.mkdirSync(mediaDir, { recursive: true });
+            }
+            fs.copyFileSync(found, path.join(mediaDir, path.basename(found)));
+          } else if (options.includeAttachments) {
+            type = 'attachment';
+            mediaUrl = `/media/${path.basename(found)}`;
+            content = mediaUrl;
+            
+            // Copy the file to the media directory
+            const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media');
+            if (!fs.existsSync(mediaDir)) {
+              fs.mkdirSync(mediaDir, { recursive: true });
+            }
+            fs.copyFileSync(found, path.join(mediaDir, path.basename(found)));
           }
         }
       }
-      
-      parsedMessages.push({
-        timestamp: isoTimestamp,
-        sender,
-        content: messageType === 'text' ? content : mediaUrl || '',
-        type: messageType,
-        mediaUrl,
-        duration
-      });
+
+      lastMsg = { timestamp: iso, sender, content, type, mediaUrl, duration };
+      parsedMessages.push(lastMsg);
+    } else if (lastMsg) {
+      // continuation of previous message
+      lastMsg.content += '\n' + line.trim();
     }
   }
-  
+
   return {
     parsedMessages,
-    parsedParticipants: Array.from(participantsSet)
+    parsedParticipants: Array.from(participants)
   };
 }
 
