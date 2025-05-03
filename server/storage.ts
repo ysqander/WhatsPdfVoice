@@ -294,7 +294,10 @@ export class MemStorage implements IStorage {
     const now = new Date();
     let cleanupCount = 0;
     
-    for (const [mediaId, mediaFile] of this.mediaFiles.entries()) {
+    // Convert map entries to array to avoid iterator issues
+    const mediaEntries = Array.from(this.mediaFiles.entries());
+    
+    for (const [mediaId, mediaFile] of mediaEntries) {
       // Skip files with no created date or key
       if (!mediaFile.createdAt || !mediaFile.key) continue;
       
