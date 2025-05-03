@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { storage } from "../storage";
+import { storage, MediaFile } from "../storage";
 import { parse } from "../lib/parser";
 import { generatePdf } from "../lib/pdf";
 import { ProcessingOptions, ProcessingStep } from "@shared/types";
@@ -10,6 +10,7 @@ import crypto from "crypto";
 import archiver from "archiver";
 import os from "os";
 import { format } from "date-fns";
+import { testR2Connection, getSignedR2Url } from "../lib/r2Storage";
 
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
@@ -110,6 +111,7 @@ export const uploadController = {
           console.log('Parse completed successfully');
           chatData.fileHash = fileHash;
           chatData.originalFilename = req.file!.originalname;
+          // Convert processing options to string for storage
           chatData.processingOptions = JSON.stringify(options);
           
           // Save chat export to storage
@@ -128,9 +130,76 @@ export const uploadController = {
             });
           }
           
-          // Process voice messages
+          // Process and upload media files to R2
           storage.saveProcessingProgress(clientId, 60, ProcessingStep.CONVERT_VOICE);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 60, step: ProcessingStep.CONVERT_VOICE })}\n\n`);
+          
+          // Verify R2 connection
+          const r2Connected = await testR2Connection().catch(err => {
+            console.error('Error connecting to R2:', err);
+            return false;
+          });
+          
+          if (!r2Connected) {
+            console.warn('R2 connection failed, using local storage for media files');
+          } else {
+            console.log('R2 connection successful, proceeding with media uploads');
+            
+            // Get saved messages with media
+            const messages = await storage.getMessagesByChatExportId(savedChatExport.id!);
+            const mediaMessages = messages.filter(msg => 
+              msg.mediaUrl && (msg.type === 'voice' || msg.type === 'image' || msg.type === 'attachment')
+            );
+            
+            console.log(`Found ${mediaMessages.length} media messages to upload to R2`);
+            
+            // Upload each media file to R2
+            for (const message of mediaMessages) {
+              try {
+                if (!message.mediaUrl) continue;
+                
+                // Get the file path (mediaUrl currently points to local storage)
+                const mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', 
+                  savedChatExport.id!.toString(), path.basename(message.mediaUrl));
+                
+                if (fs.existsSync(mediaPath)) {
+                  console.log(`Uploading ${message.type} to R2: ${mediaPath}`);
+                  
+                  // Determine content type
+                  let contentType = 'application/octet-stream';
+                  if (message.type === 'voice') {
+                    contentType = 'audio/ogg';
+                  } else if (message.type === 'image') {
+                    const ext = path.extname(mediaPath).toLowerCase();
+                    if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+                    else if (ext === '.png') contentType = 'image/png';
+                    else if (ext === '.gif') contentType = 'image/gif';
+                    else if (ext === '.webp') contentType = 'image/webp';
+                  }
+                  
+                  // Upload to R2
+                  const mediaFile = await storage.uploadMediaToR2(
+                    mediaPath,
+                    contentType,
+                    savedChatExport.id!,
+                    message.id,
+                    message.type as any
+                  );
+                  
+                  // Update message with R2 URL
+                  await storage.updateMessageMediaUrl(message.id, mediaFile.key, mediaFile.url!);
+                  console.log(`Uploaded ${message.type} to R2, key: ${mediaFile.key}`);
+                }
+              } catch (error) {
+                console.error(`Error uploading media file for message ${message.id}:`, error);
+                // Continue with other files even if one fails
+              }
+            }
+          }
+          
+          // Update chatData with new media URLs before generating PDF
+          const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
+          chatData.messages = updatedMessages;
           
           // Generate PDF
           console.log('Starting PDF generation for chat export:', savedChatExport.id);
@@ -140,12 +209,34 @@ export const uploadController = {
           const pdfResult = await generatePdf(chatData);
           console.log('PDF generation completed:', pdfResult);
           
-          // Save PDF URL
-          const pdfFileName = path.basename(pdfResult);
-          console.log('Generated PDF filename:', pdfFileName);
-          const pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
-          console.log('Generated PDF URL:', pdfUrl);
+          // Upload PDF to R2 if R2 is connected
+          let pdfUrl = '';
+          if (r2Connected) {
+            try {
+              // Upload PDF to R2
+              const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', path.basename(pdfResult));
+              const pdfMediaFile = await storage.uploadMediaToR2(
+                pdfPath,
+                'application/pdf',
+                savedChatExport.id!,
+                undefined,
+                'pdf'
+              );
+              pdfUrl = pdfMediaFile.url!;
+              console.log('Uploaded PDF to R2:', pdfMediaFile.key);
+            } catch (error) {
+              console.error('Error uploading PDF to R2:', error);
+              // Fallback to local PDF URL
+              const pdfFileName = path.basename(pdfResult);
+              pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
+            }
+          } else {
+            // Use local PDF URL
+            const pdfFileName = path.basename(pdfResult);
+            pdfUrl = `/api/whatsapp/pdf/${pdfFileName}`;
+          }
           
+          console.log('Generated PDF URL:', pdfUrl);
           await storage.savePdfUrl(savedChatExport.id!, pdfUrl);
           console.log('PDF URL saved to storage for chat export:', savedChatExport.id);
           

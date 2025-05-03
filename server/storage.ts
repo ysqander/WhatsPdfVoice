@@ -234,7 +234,7 @@ export class MemStorage implements IStorage {
     if (mediaFile.messageId) {
       const message = this.messages.get(mediaFile.messageId);
       if (message) {
-        message.mediaUrl = undefined;
+        message.mediaUrl = null; // Set to null, not undefined
         this.messages.set(mediaFile.messageId, message);
       }
     }
@@ -246,16 +246,22 @@ export class MemStorage implements IStorage {
    * Get all media files for a chat export
    */
   async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
-    return Array.from(this.mediaFiles.values())
-      .filter(media => media.chatExportId === chatExportId)
-      .map(async (media) => {
-        // Refresh URL if it's expired or missing
-        if (!media.url) {
-          media.url = await getSignedR2Url(media.key);
-          this.mediaFiles.set(media.id, media);
-        }
-        return media;
-      });
+    // Filter media files by chat export ID
+    const mediaFiles = Array.from(this.mediaFiles.values())
+      .filter(media => media.chatExportId === chatExportId);
+    
+    // Create an array of promises to refresh URLs
+    const refreshPromises = mediaFiles.map(async (media) => {
+      // Refresh URL if it's expired or missing
+      if (!media.url) {
+        media.url = await getSignedR2Url(media.key);
+        this.mediaFiles.set(media.id, media);
+      }
+      return media;
+    });
+    
+    // Wait for all refreshes to complete
+    return Promise.all(refreshPromises);
   }
 
   /**

@@ -129,6 +129,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     res.sendFile(mediaPath);
   });
+  
+  // R2 Media Management Routes
+  
+  // Get all media files for a chat
+  app.get('/api/media/:chatId', async (req, res) => {
+    try {
+      const chatId = parseInt(req.params.chatId, 10);
+      if (isNaN(chatId)) {
+        return res.status(400).json({ error: 'Invalid chat ID' });
+      }
+      
+      // Get all media files for this chat
+      const mediaFiles = await storage.getMediaFilesByChat(chatId);
+      
+      return res.status(200).json({ media: mediaFiles });
+    } catch (error) {
+      console.error('Error fetching media files:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch media files',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Delete a media file
+  app.delete('/api/media/:mediaId', async (req, res) => {
+    try {
+      const { mediaId } = req.params;
+      
+      // Delete the media file
+      await storage.deleteMedia(mediaId);
+      
+      return res.status(200).json({ success: true, message: 'Media deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting media file:', error);
+      return res.status(500).json({ 
+        error: 'Failed to delete media file',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   const httpServer = createServer(app);
 
