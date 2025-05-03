@@ -1,0 +1,105 @@
+Upload request received: {
+  headers: {
+    host: 'eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'content-length': '75139',
+    accept: '*/*',
+    'accept-encoding': 'gzip, deflate, br, zstd',
+    'accept-language': 'en-GB,en;q=0.8',
+    'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary1RbllEAyjssQXztd',
+    origin: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    referer: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/',
+    'sec-ch-ua': '"Brave";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'x-forwarded-for': '45.155.143.100, 10.83.3.123',
+    'x-forwarded-proto': 'https',
+    'x-replit-user-bio': '',
+    'x-replit-user-id': '',
+    'x-replit-user-name': '',
+    'x-replit-user-profile-image': '',
+    'x-replit-user-roles': '',
+    'x-replit-user-teams': '',
+    'x-replit-user-url': ''
+  },
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundary1RbllEAyjssQXztd',
+  files: undefined,
+  file: {
+    fieldname: 'file',
+    originalname: 'WhatsApp Chat - Iris.zip',
+    encoding: '7bit',
+    mimetype: 'application/zip',
+    destination: '/tmp/whatspdf-uploads',
+    filename: 'file-1746289195733-03378902-c07b-418c-8862-844e1adea45b.zip',
+    path: '/tmp/whatspdf-uploads/file-1746289195733-03378902-c07b-418c-8862-844e1adea45b.zip',
+    size: 74715
+  },
+  body: [Object: null prototype] {
+    options: '{"includeVoiceMessages":true,"includeTimestamps":true,"highlightSenders":true,"includeImages":false,"includeAttachments":false}'
+  }
+}
+File details: {
+  originalname: 'WhatsApp Chat - Iris.zip',
+  mimetype: 'application/zip',
+  size: 74715,
+  path: '/tmp/whatspdf-uploads/file-1746289195733-03378902-c07b-418c-8862-844e1adea45b.zip'
+}
+Waiting for SSE connection for clientId: f3390a8d-5f08-4c84-ae17-e9f4b3b0bb70
+4:19:55 PM [express] POST /api/whatsapp/process 200 in 215ms :: {"clientId":"f3390a8d-5f08-4c84-ae17…
+Starting background processing for clientId: f3390a8d-5f08-4c84-ae17-e9f4b3b0bb70
+Starting parse for file: /tmp/whatspdf-uploads/file-1746289195733-03378902-c07b-418c-8862-844e1adea45b.zip
+Parsed chat export: {
+  messageCount: 9,
+  participantCount: 2,
+  firstMessageSample: {
+    timestamp: '2025-05-01T18:27:34',
+    sender: 'Iris Adamov',
+    content: 'Hi Alex, there’s mold coming back in the corner of the bedroom again. Can you please arrange for someone to look at it?',
+    type: 'text',
+    mediaUrl: undefined,
+    duration: undefined
+  },
+  options: {
+    includeVoiceMessages: true,
+    includeTimestamps: true,
+    highlightSenders: true,
+    includeImages: false,
+    includeAttachments: false
+  }
+}
+Parse completed successfully
+R2 connection successful
+R2 connection successful, proceeding with media uploads
+Found 3 media messages to upload to R2
+Processing 3 voice messages
+Voice file not found: /tmp/whatspdf/media/1/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Voice file not found: /tmp/whatspdf/media/1/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Voice file not found: /tmp/whatspdf/media/1/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Processing 0 other media messages
+Starting PDF generation for chat export: 1
+Grouped messages by date: {
+  totalDates: 1,
+  messagesByDateSample: [ { date: '01 May 2025', messageCount: 9 } ]
+}
+Using app base URL: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev
+Using app base URL: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev
+Using app base URL: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev
+Saving PDF document...
+Writing PDF to path: /tmp/whatspdf/pdfs/4603f49a-1a20-403f-953f-37525a2bbcd7.pdf
+PDF file written successfully
+PDF details: {
+  pdfId: '4603f49a-1a20-403f-953f-37525a2bbcd7',
+  pdfPath: '/tmp/whatspdf/pdfs/4603f49a-1a20-403f-953f-37525a2bbcd7.pdf',
+  size: 2677
+}
+PDF generation completed: /tmp/whatspdf/pdfs/4603f49a-1a20-403f-953f-37525a2bbcd7.pdf
+Uploaded file to R2: chats/1/pdf/4603f49a_1a20_403f_953f_37525a2bbcd7_2b295fd1-043b-470a-8f73-5650e3363332.pdf
+Uploaded media file to R2: chats/1/pdf/4603f49a_1a20_403f_953f_37525a2bbcd7_2b295fd1-043b-470a-8f73-5650e3363332.pdf
+Uploaded PDF to R2: chats/1/pdf/4603f49a_1a20_403f_953f_37525a2bbcd7_2b295fd1-043b-470a-8f73-5650e3363332.pdf
+Generated PDF URL: https://whatspdf.72e194f828a1009a2557f094fbabd3bb.r2.cloudflarestorage.com/chats/1/pdf/4603f49a_1a20_403f_953f_37525a2bbcd7_2b295fd1-043b-470a-8f73-5650e3363332.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=8140292b7ac9d0f34382c821c8fd13b6%2F20250503%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250503T161956Z&X-Amz-Expires=604800&X-Amz-Signature=400c7fc765ac7032990cc43e3f8042749424713b940facc3e8ca781405d81564&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject
+PDF URL saved to storage for chat export: 1
+4:19:56 PM [express] GET /api/whatsapp/process-status 200 in 610ms
