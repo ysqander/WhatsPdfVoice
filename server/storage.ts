@@ -282,15 +282,19 @@ export class MemStorage implements IStorage {
   async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
     const message = this.messages.get(messageId);
     if (message) {
-      message.mediaUrl = r2Url;
-      this.messages.set(messageId, message);
+      // Determine the base URL of our application for absolute URLs
+      // In Replit, we can use REPLIT_DOMAINS or fallback to localhost
+      const appBaseUrl = process.env.REPLIT_DOMAINS 
+        ? `https://${process.env.REPLIT_DOMAINS}`
+        : 'http://localhost:5000'; // Fallback for local development
       
-      // Also add to media files if not already there
+      // Find or create a media file entry for this message
+      let mediaId: string;
       const existingMedia = Array.from(this.mediaFiles.values())
         .find(m => m.messageId === messageId);
       
       if (!existingMedia) {
-        const mediaId = uuidv4();
+        mediaId = uuidv4();
         let contentType = "application/octet-stream";
         let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment';
         
@@ -312,12 +316,20 @@ export class MemStorage implements IStorage {
           contentType,
           size: 0, // We don't know the size
           uploadedAt: new Date().toISOString(),
-          url: r2Url,
+          url: r2Url, // Store original R2 URL for direct access if needed
           type
         };
         
         this.mediaFiles.set(mediaId, mediaFile);
+      } else {
+        mediaId = existingMedia.id;
       }
+      
+      // Instead of using the direct R2 URL, store a reference to our proxy endpoint
+      // This ensures the links in the PDF will always be valid
+      message.mediaUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`;
+      console.log(`Setting message ${messageId} media URL to proxy: ${message.mediaUrl}`);
+      this.messages.set(messageId, message);
     }
   }
 }

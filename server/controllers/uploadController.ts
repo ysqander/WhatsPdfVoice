@@ -258,19 +258,27 @@ export const uploadController = {
           let pdfUrl = '';
           if (r2Connected) {
             try {
+              // Determine the base URL of our application for absolute URLs
+              const appBaseUrl = process.env.REPLIT_DOMAINS 
+                ? `https://${process.env.REPLIT_DOMAINS}`
+                : 'http://localhost:5000';
+                
               // Upload PDF to R2
               const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', path.basename(pdfResult));
-              // Upload PDF to R2 with 90-day signed URL
+              
+              // Upload PDF to R2
               const pdfMediaFile = await storage.uploadMediaToR2(
                 pdfPath,
                 'application/pdf',
                 savedChatExport.id!,
                 undefined,
-                'pdf',
-                60 * 60 * 24 * 90 // 90 days expiration
+                'pdf'
               );
-              pdfUrl = pdfMediaFile.url!;
+              
+              // Generate proxy URL for the PDF instead of direct R2 URL
+              pdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`;
               console.log('Uploaded PDF to R2:', pdfMediaFile.key);
+              console.log('Generated proxy URL for PDF:', pdfUrl);
             } catch (error) {
               console.error('Error uploading PDF to R2:', error);
               // Fallback to local PDF URL
