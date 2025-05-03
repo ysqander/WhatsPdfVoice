@@ -4,6 +4,12 @@ import { ProcessingOptions } from "@shared/types";
 import path from "path";
 import os from "os";
 import fs from "fs";
+import { 
+  uploadFileToR2, 
+  getSignedR2Url, 
+  deleteFileFromR2, 
+  R2StorageObjectMetadata 
+} from "./lib/r2Storage";
 
 // Create directories for storing files
 const baseDir = path.join(os.tmpdir(), 'whatspdf');
@@ -17,6 +23,20 @@ const mediaDir = path.join(baseDir, 'media');
   }
 });
 
+// Define media file metadata structure
+export interface MediaFile {
+  id: string;
+  key: string;
+  chatExportId: number;
+  messageId?: number;
+  originalName: string;
+  contentType: string;
+  size: number;
+  uploadedAt: string;
+  url?: string;
+  type: 'voice' | 'image' | 'attachment' | 'pdf';
+}
+
 // Storage interface
 export interface IStorage {
   saveChatExport(data: InsertChatExport): Promise<ChatExport>;
@@ -27,6 +47,20 @@ export interface IStorage {
   saveProcessingProgress(clientId: string, progress: number, step?: number): void;
   getProcessingProgress(clientId: string): { progress: number, step?: number };
   savePdfUrl(chatExportId: number, pdfUrl: string): Promise<void>;
+  
+  // Media file management with R2
+  uploadMediaToR2(
+    filePath: string, 
+    contentType: string, 
+    chatExportId: number, 
+    messageId?: number, 
+    type?: 'voice' | 'image' | 'attachment' | 'pdf'
+  ): Promise<MediaFile>;
+  getMediaUrl(mediaId: string): Promise<string>;
+  deleteMedia(mediaId: string): Promise<boolean>;
+  getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]>;
+  getMediaFile(mediaId: string): Promise<MediaFile | undefined>;
+  updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void>;
 }
 
 // In-memory storage implementation
@@ -34,6 +68,7 @@ export class MemStorage implements IStorage {
   private chatExports: Map<number, ChatExport>;
   private messages: Map<number, Message>;
   private processingProgress: Map<string, { progress: number, step?: number }>;
+  private mediaFiles: Map<string, MediaFile>;
   private currentChatExportId: number;
   private currentMessageId: number;
 
@@ -41,6 +76,7 @@ export class MemStorage implements IStorage {
     this.chatExports = new Map();
     this.messages = new Map();
     this.processingProgress = new Map();
+    this.mediaFiles = new Map();
     this.currentChatExportId = 1;
     this.currentMessageId = 1;
   }
@@ -50,7 +86,9 @@ export class MemStorage implements IStorage {
     const chatExport: ChatExport = {
       ...data,
       id,
-      generatedAt: new Date().toISOString(),
+      generatedAt: new Date(),
+      participants: data.participants || null,
+      pdfUrl: data.pdfUrl || null,
     };
     this.chatExports.set(id, chatExport);
     return chatExport;
@@ -65,6 +103,10 @@ export class MemStorage implements IStorage {
     const savedMessage: Message = {
       ...message,
       id,
+      type: message.type || 'text', // Ensure type is always set
+      mediaUrl: message.mediaUrl || null,
+      duration: message.duration || null,
+      isDeleted: message.isDeleted || null
     };
     this.messages.set(id, savedMessage);
     return savedMessage;
@@ -102,6 +144,174 @@ export class MemStorage implements IStorage {
     if (chatExport) {
       chatExport.pdfUrl = pdfUrl;
       this.chatExports.set(chatExportId, chatExport);
+    }
+  }
+
+  // R2 Media Management Methods
+
+  /**
+   * Upload a media file to R2 storage
+   */
+  async uploadMediaToR2(
+    filePath: string, 
+    contentType: string, 
+    chatExportId: number, 
+    messageId?: number, 
+    type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment'
+  ): Promise<MediaFile> {
+    try {
+      // Get file stats
+      const stats = fs.statSync(filePath);
+      const originalName = path.basename(filePath);
+
+      // Upload to R2
+      const directory = `chats/${chatExportId}/${type}`;
+      const key = await uploadFileToR2(filePath, contentType, directory);
+      
+      // Get signed URL
+      const url = await getSignedR2Url(key);
+      
+      // Create media file record
+      const mediaFile: MediaFile = {
+        id: uuidv4(),
+        key,
+        chatExportId,
+        messageId,
+        originalName,
+        contentType,
+        size: stats.size,
+        uploadedAt: new Date().toISOString(),
+        url,
+        type
+      };
+      
+      // Store in memory
+      this.mediaFiles.set(mediaFile.id, mediaFile);
+      
+      console.log(`Uploaded media file to R2: ${key}`);
+      return mediaFile;
+    } catch (error) {
+      console.error("Error uploading media to R2:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a fresh signed URL for a media file
+   */
+  async getMediaUrl(mediaId: string): Promise<string> {
+    const mediaFile = this.mediaFiles.get(mediaId);
+    if (!mediaFile) {
+      throw new Error(`Media file not found: ${mediaId}`);
+    }
+    
+    // Generate a fresh signed URL
+    const url = await getSignedR2Url(mediaFile.key);
+    
+    // Update the URL in our records
+    mediaFile.url = url;
+    this.mediaFiles.set(mediaId, mediaFile);
+    
+    return url;
+  }
+
+  /**
+   * Delete a media file from R2
+   */
+  async deleteMedia(mediaId: string): Promise<boolean> {
+    const mediaFile = this.mediaFiles.get(mediaId);
+    if (!mediaFile) {
+      throw new Error(`Media file not found: ${mediaId}`);
+    }
+    
+    // Delete from R2
+    await deleteFileFromR2(mediaFile.key);
+    
+    // Remove from our records
+    this.mediaFiles.delete(mediaId);
+    
+    // If this media is associated with a message, update the message
+    if (mediaFile.messageId) {
+      const message = this.messages.get(mediaFile.messageId);
+      if (message) {
+        message.mediaUrl = undefined;
+        this.messages.set(mediaFile.messageId, message);
+      }
+    }
+    
+    return true;
+  }
+
+  /**
+   * Get all media files for a chat export
+   */
+  async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
+    return Array.from(this.mediaFiles.values())
+      .filter(media => media.chatExportId === chatExportId)
+      .map(async (media) => {
+        // Refresh URL if it's expired or missing
+        if (!media.url) {
+          media.url = await getSignedR2Url(media.key);
+          this.mediaFiles.set(media.id, media);
+        }
+        return media;
+      });
+  }
+
+  /**
+   * Get a specific media file by ID
+   */
+  async getMediaFile(mediaId: string): Promise<MediaFile | undefined> {
+    const mediaFile = this.mediaFiles.get(mediaId);
+    if (mediaFile && !mediaFile.url) {
+      mediaFile.url = await getSignedR2Url(mediaFile.key);
+      this.mediaFiles.set(mediaId, mediaFile);
+    }
+    return mediaFile;
+  }
+
+  /**
+   * Update a message with R2 media URL
+   */
+  async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (message) {
+      message.mediaUrl = r2Url;
+      this.messages.set(messageId, message);
+      
+      // Also add to media files if not already there
+      const existingMedia = Array.from(this.mediaFiles.values())
+        .find(m => m.messageId === messageId);
+      
+      if (!existingMedia) {
+        const mediaId = uuidv4();
+        let contentType = "application/octet-stream";
+        let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment';
+        
+        // Determine content type and type from message
+        if (message.type === 'voice') {
+          contentType = "audio/ogg";
+          type = 'voice';
+        } else if (message.type === 'image') {
+          contentType = "image/jpeg";
+          type = 'image';
+        }
+        
+        const mediaFile: MediaFile = {
+          id: mediaId,
+          key: r2Key,
+          chatExportId: message.chatExportId,
+          messageId,
+          originalName: path.basename(r2Key),
+          contentType,
+          size: 0, // We don't know the size
+          uploadedAt: new Date().toISOString(),
+          url: r2Url,
+          type
+        };
+        
+        this.mediaFiles.set(mediaId, mediaFile);
+      }
     }
   }
 }
