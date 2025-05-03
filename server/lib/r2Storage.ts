@@ -43,8 +43,11 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
   "application/x-zip-compressed": ".zip",
 };
 
-// Default expiration time for signed URLs (6 hours)
-const DEFAULT_EXPIRATION = 60 * 60 * 6;
+// Default expiration time for signed URLs (7 days - AWS maximum)
+const DEFAULT_EXPIRATION = 60 * 60 * 24 * 7;
+
+// Maximum allowed expiration time by AWS S3 (7 days)
+const MAX_EXPIRATION = 60 * 60 * 24 * 7;
 
 export interface R2StorageObjectMetadata {
   key: string;
@@ -119,13 +122,16 @@ export async function getSignedR2Url(
   expiresIn: number = DEFAULT_EXPIRATION
 ): Promise<string> {
   try {
+    // Ensure expiration doesn't exceed AWS maximum
+    const safeExpiration = Math.min(expiresIn, MAX_EXPIRATION);
+    
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
     });
 
     const signedUrl = await getSignedUrl(s3Client, command, {
-      expiresIn,
+      expiresIn: safeExpiration,
     });
 
     return signedUrl;
