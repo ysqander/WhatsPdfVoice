@@ -507,6 +507,9 @@ export const uploadController = {
 
           try {
             // Download file from R2
+            if (!file.url) {
+              throw new Error("Media URL is missing");
+            }
             const response = await fetch(file.url);
             if (!response.ok) {
               throw new Error(`Failed to download media: ${response.status} ${response.statusText}`);
