@@ -234,7 +234,7 @@ async function generatePdfWithPdfLib(
         y = lineY - 20;
       } else if (message.type === "voice") {
         if (message.mediaUrl) {
-          const playText = "▶ Play Voice Message";
+          const playText = "> Play Voice Message";
           
           // Draw the link text
           currentPage.drawText(playText, {
