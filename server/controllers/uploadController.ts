@@ -199,8 +199,15 @@ export const uploadController = {
                 if (!message.mediaUrl) continue;
 
                 // Get the file path (mediaUrl currently points to local storage)
-                const mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', 
+                // First try media path with chat ID subdirectory
+                let mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', 
                   savedChatExport.id!.toString(), path.basename(message.mediaUrl));
+                
+                // If not found, try without the chat ID subdirectory (which is how parser.ts stores files)
+                if (!fs.existsSync(mediaPath)) {
+                  mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', path.basename(message.mediaUrl));
+                  console.log(`Trying alternate media path: ${mediaPath}`);
+                }
 
                 if (fs.existsSync(mediaPath)) {
                   console.log(`Uploading ${message.type} to R2: ${mediaPath}`);

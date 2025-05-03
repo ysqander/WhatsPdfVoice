@@ -329,30 +329,55 @@ function formatSender(rawJid: string): string {
 
 // Helper to find an attachment in the extracted directory
 function findAttachment(extractDir: string, attachmentName: string): string | undefined {
+  console.log(`Looking for attachment: ${attachmentName} in ${extractDir}`);
+  
   // Simple case: file exists directly
   const directPath = path.join(extractDir, attachmentName);
   if (fs.existsSync(directPath)) {
+    console.log(`Found attachment directly: ${directPath}`);
     return directPath;
   }
   
   // Search in subdirectories
   const searchRecursive = (dir: string): string | undefined => {
-    const files = fs.readdirSync(dir);
-    
-    for (const file of files) {
-      const filePath = path.join(dir, file);
-      const stats = fs.statSync(filePath);
+    try {
+      const files = fs.readdirSync(dir);
       
-      if (stats.isDirectory()) {
-        const result = searchRecursive(filePath);
-        if (result) return result;
-      } else if (file === attachmentName || file.endsWith(attachmentName)) {
-        return filePath;
+      for (const file of files) {
+        const filePath = path.join(dir, file);
+        
+        try {
+          const stats = fs.statSync(filePath);
+          
+          if (stats.isDirectory()) {
+            const result = searchRecursive(filePath);
+            if (result) return result;
+          } else if (
+            file === attachmentName || 
+            file.endsWith(attachmentName) ||
+            // Additionally check for .opus files with similar names
+            (attachmentName.match(/\.(opus|m4a|mp3|ogg)$/i) && 
+             file.includes(path.basename(attachmentName, path.extname(attachmentName))) &&
+             file.match(/\.(opus|m4a|mp3|ogg)$/i))
+          ) {
+            console.log(`Found attachment: ${filePath}`);
+            return filePath;
+          }
+        } catch (err) {
+          console.error(`Error accessing file ${filePath}:`, err);
+          // Continue with next file
+        }
       }
+    } catch (err) {
+      console.error(`Error reading directory ${dir}:`, err);
     }
     
     return undefined;
   };
   
-  return searchRecursive(extractDir);
+  const result = searchRecursive(extractDir);
+  if (!result) {
+    console.error(`Attachment not found: ${attachmentName}`);
+  }
+  return result;
 }

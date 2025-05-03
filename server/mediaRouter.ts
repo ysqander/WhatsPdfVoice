@@ -13,18 +13,24 @@ const router = Router();
 router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
   try {
     const { mediaId } = req.params;
+    console.log(`Media proxy request received for ID: ${mediaId}`);
     
     // Get the media file from storage
     const mediaFile = await storage.getMediaFile(mediaId);
     
     if (!mediaFile) {
+      console.error(`Media file not found with ID: ${mediaId}`);
       return res.status(404).json({ error: 'Media file not found' });
     }
     
+    console.log(`Found media file: ${JSON.stringify(mediaFile, null, 2)}`);
+    
     // Generate a fresh signed URL (1 hour expiration)
     const signedUrl = await getSignedR2Url(mediaFile.key, 60 * 60);
+    console.log(`Generated signed URL: ${signedUrl}`);
     
     // Redirect to the actual R2 URL
+    console.log(`Redirecting to R2 URL`);
     return res.redirect(signedUrl);
   } catch (error) {
     console.error('Failed to proxy media request:', error);
