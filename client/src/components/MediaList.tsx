@@ -59,12 +59,17 @@ export default function MediaList({ chatId, onDeleteMedia }: MediaListProps) {
       setLoading(true);
       setError(null);
       
-      const response = await apiRequest<{ media: MediaFile[] }>({
+      const response = await apiRequest({
         url: `/api/media/${chatId}`,
         method: "GET",
       });
       
-      setMediaFiles(response.media || []);
+      if (response && typeof response === 'object' && 'media' in response) {
+        setMediaFiles(response.media as MediaFile[] || []);
+      } else {
+        setMediaFiles([]);
+        setError("Invalid response format from server");
+      }
     } catch (err) {
       console.error("Error fetching media files:", err);
       setError("Failed to load media files. Please try again.");
@@ -114,7 +119,7 @@ export default function MediaList({ chatId, onDeleteMedia }: MediaListProps) {
       case 'image':
         return <FileImage className="w-4 h-4" />;
       case 'pdf':
-        return <FilePdf className="w-4 h-4" />;
+        return <FileText className="w-4 h-4" />;
       default:
         return <File className="w-4 h-4" />;
     }

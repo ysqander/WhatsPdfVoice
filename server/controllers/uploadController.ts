@@ -376,19 +376,124 @@ export const uploadController = {
         return res.status(404).json({ message: "PDF not found for this chat" });
       }
       
-      // Get the PDF path
-      const pdfFileName = path.basename(chatExport.pdfUrl);
-      const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
-      
-      if (!fs.existsSync(pdfPath)) {
-        return res.status(404).json({ message: "PDF file not found" });
+      // Temporary directory for the evidence package
+      const tempDir = path.join(os.tmpdir(), 'whatspdf', 'evidence', chatId.toString());
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
       }
       
-      // Get all messages with media files
+      // Create subdirectories for media types
+      const voiceDir = path.join(tempDir, 'media', 'voice_messages');
+      const imageDir = path.join(tempDir, 'media', 'images');
+      const otherDir = path.join(tempDir, 'media', 'other');
+      fs.mkdirSync(voiceDir, { recursive: true });
+      fs.mkdirSync(imageDir, { recursive: true });
+      fs.mkdirSync(otherDir, { recursive: true });
+      
+      // Get all media files for this chat export
+      const mediaFiles = await storage.getMediaFilesByChat(chatId);
+      
+      // Get PDF path - could be from local storage or R2
+      let pdfPath = '';
+      
+      if (chatExport.pdfUrl.startsWith('http')) {
+        // PDF is in R2
+        const pdfFile = mediaFiles.find(file => file.type === 'pdf');
+        if (pdfFile) {
+          pdfPath = path.join(tempDir, 'Chat_Transcript.pdf');
+          
+          // Download the PDF from the URL
+          try {
+            const pdfResponse = await fetch(pdfFile.url);
+            if (!pdfResponse.ok) {
+              throw new Error(`Failed to download PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+            }
+            const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+            fs.writeFileSync(pdfPath, Buffer.from(pdfArrayBuffer));
+            console.log('Downloaded PDF from R2 for evidence zip');
+          } catch (err) {
+            console.error('Error downloading PDF from R2:', err);
+            return res.status(500).json({ message: "Failed to download PDF from cloud storage" });
+          }
+        } else {
+          return res.status(404).json({ message: "PDF not found in cloud storage" });
+        }
+      } else {
+        // PDF is in local storage
+        const pdfFileName = path.basename(chatExport.pdfUrl);
+        pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
+        
+        if (!fs.existsSync(pdfPath)) {
+          return res.status(404).json({ message: "PDF file not found in local storage" });
+        }
+      }
+      
+      // Get all messages with media references
       const messages = await storage.getMessagesByChatExportId(chatId);
       const mediaMessages = messages.filter(message => 
         message.mediaUrl && (message.type === 'voice' || message.type === 'image' || message.type === 'attachment')
       );
+      
+      // Download media files from R2 if needed
+      const downloadPromises = mediaFiles
+        .filter(file => file.type !== 'pdf') // Exclude PDF as we've already handled it
+        .map(async (file) => {
+          // Determine target directory based on file type
+          let targetDir = otherDir;
+          if (file.type === 'voice') targetDir = voiceDir;
+          if (file.type === 'image') targetDir = imageDir;
+          
+          // Create a filename from the key (removing directory path)
+          const fileName = path.basename(file.key);
+          const filePath = path.join(targetDir, fileName);
+          
+          try {
+            // Download file from R2
+            const response = await fetch(file.url);
+            if (!response.ok) {
+              throw new Error(`Failed to download media: ${response.status} ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
+            console.log(`Downloaded media file from R2: ${fileName}`);
+            return { success: true, path: filePath, type: file.type, name: fileName };
+          } catch (err) {
+            console.error(`Error downloading media file ${fileName}:`, err);
+            return { success: false, path: null, type: file.type, name: fileName };
+          }
+        });
+      
+      // Wait for all downloads to complete
+      const downloadResults = await Promise.all(downloadPromises);
+      const successfulDownloads = downloadResults.filter(result => result.success);
+      console.log(`Downloaded ${successfulDownloads.length} of ${downloadResults.length} media files for evidence zip`);
+      
+      // If we have local media files, include those too
+      const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media', chatId.toString());
+      if (fs.existsSync(mediaDir)) {
+        // Copy local media files to the evidence directory
+        const copyLocalMedia = (message: any) => {
+          if (!message.mediaUrl) return;
+          
+          // Skip R2 URLs
+          if (message.mediaUrl.startsWith('http')) return;
+          
+          const mediaFileName = path.basename(message.mediaUrl);
+          const mediaPath = path.join(mediaDir, mediaFileName);
+          
+          if (fs.existsSync(mediaPath)) {
+            let targetDir = otherDir;
+            if (message.type === 'voice') targetDir = voiceDir;
+            if (message.type === 'image') targetDir = imageDir;
+            
+            const targetPath = path.join(targetDir, mediaFileName);
+            fs.copyFileSync(mediaPath, targetPath);
+            console.log(`Copied local media file: ${mediaFileName}`);
+          }
+        };
+        
+        mediaMessages.forEach(copyLocalMedia);
+      }
       
       // Set headers for download
       res.setHeader('Content-Type', 'application/zip');
@@ -405,28 +510,23 @@ export const uploadController = {
       // Add PDF to archive
       archive.file(pdfPath, { name: `Chat_Transcript.pdf` });
       
-      // Create media directory in archive
-      const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media', chatId.toString());
-      
-      // Add media files to archive
-      for (const message of mediaMessages) {
-        if (message.mediaUrl) {
-          const mediaFileName = path.basename(message.mediaUrl);
-          const mediaPath = path.join(mediaDir, mediaFileName);
-          
-          if (fs.existsSync(mediaPath)) {
-            // Organize files by type
-            let subDir = 'other';
-            if (message.type === 'voice') {
-              subDir = 'voice_messages';
-            } else if (message.type === 'image') {
-              subDir = 'images';
-            }
-            
-            archive.file(mediaPath, { name: `media/${subDir}/${mediaFileName}` });
+      // Add media files to archive by walking the directory
+      const walkDir = (dir: string, zipPath: string) => {
+        if (!fs.existsSync(dir)) return;
+        
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          const filePath = path.join(dir, file);
+          const stat = fs.statSync(filePath);
+          if (stat.isFile()) {
+            archive.file(filePath, { name: path.join(zipPath, file) });
           }
         }
-      }
+      };
+      
+      walkDir(voiceDir, 'media/voice_messages');
+      walkDir(imageDir, 'media/images');
+      walkDir(otherDir, 'media/other');
       
       // Add a manifest file with metadata
       const manifest = {
@@ -435,7 +535,12 @@ export const uploadController = {
         generatedOn: new Date().toISOString(),
         participants: chatExport.participants || ['Unknown'],
         messageCount: messages.length,
-        mediaCount: mediaMessages.length,
+        mediaCount: {
+          total: mediaFiles.length - (mediaFiles.find(f => f.type === 'pdf') ? 1 : 0),
+          voice: mediaFiles.filter(f => f.type === 'voice').length,
+          image: mediaFiles.filter(f => f.type === 'image').length,
+          attachment: mediaFiles.filter(f => f.type === 'attachment').length
+        },
         originalFilename: chatExport.originalFilename
       };
       
@@ -467,6 +572,16 @@ Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
       
       // Finalize archive
       await archive.finalize();
+      
+      // Clean up the temp directory after a delay
+      setTimeout(() => {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+          console.log(`Cleaned up temp directory: ${tempDir}`);
+        } catch (err) {
+          console.error(`Error cleaning up temp directory ${tempDir}:`, err);
+        }
+      }, 60000); // 1 minute delay
       
       console.log(`Evidence ZIP created for chat ID ${chatId}`);
       
