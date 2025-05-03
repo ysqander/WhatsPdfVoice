@@ -20,7 +20,7 @@ async function main() {
     
     // Create a connection pool
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const client = drizzle({ pool, schema });
+    const client = drizzle(pool, { schema });
     
     // Run migrations
     await migrate(client, { migrationsFolder: "migrations" });

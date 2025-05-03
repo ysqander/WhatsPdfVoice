@@ -10,13 +10,14 @@ export interface ProcessingOptions {
 
 export interface Message {
   id?: number;
-  timestamp: string;
+  timestamp: string | Date;
   sender: string;
   content: string;
   type: 'text' | 'voice' | 'image' | 'attachment';
-  mediaUrl?: string;
-  duration?: number;
+  mediaUrl?: string | null;
+  duration?: number | null;
   chatExportId?: number;
+  isDeleted?: boolean | null;
 }
 
 export interface ChatExport {

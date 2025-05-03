@@ -23,10 +23,12 @@ export class DatabaseStorage implements IStorage {
    * Save a chat export
    */
   async saveChatExport(data: InsertChatExport): Promise<ChatExport> {
-    // Convert ProcessingOptions to string for database storage
+    // For database insertion, ensure processingOptions is a string
     const insertData = {
       ...data,
-      processingOptions: JSON.stringify(data.processingOptions)
+      processingOptions: typeof data.processingOptions === 'string' 
+        ? data.processingOptions 
+        : JSON.stringify(data.processingOptions)
     };
     
     const [chatExport] = await db
@@ -34,10 +36,12 @@ export class DatabaseStorage implements IStorage {
       .values(insertData)
       .returning();
     
+    // For the return value, ensure processingOptions is an object
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
-      processingOptions: JSON.parse(chatExport.processingOptions) as ProcessingOptions
+      processingOptions: typeof chatExport.processingOptions === 'string'
+        ? JSON.parse(chatExport.processingOptions)
+        : chatExport.processingOptions
     };
   }
 
@@ -54,8 +58,10 @@ export class DatabaseStorage implements IStorage {
     
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
-      processingOptions: JSON.parse(chatExport.processingOptions) as ProcessingOptions
+      // Ensure processingOptions is an object
+      processingOptions: typeof chatExport.processingOptions === 'string'
+        ? JSON.parse(chatExport.processingOptions)
+        : chatExport.processingOptions
     };
   }
 
