@@ -252,16 +252,19 @@ async function generatePdfWithPdfLib(
           const linkY = y - 2;
           
           // Add clickable link annotation
-          page.addAnnotation({
-            type: 'link',
-            rectangle: { 
-              x: linkX, 
-              y: linkY, 
-              width: textWidth, 
-              height: linkHeight 
-            },
-            url: message.mediaUrl
-          });
+          currentPage.node.setAnnot(
+            currentPage.doc.context.obj({
+              Type: 'Annot',
+              Subtype: 'Link',
+              Rect: [linkX, linkY, linkX + textWidth, linkY + linkHeight],
+              Border: [0, 0, 0],
+              A: {
+                Type: 'Action',
+                S: 'URI',
+                URI: message.mediaUrl,
+              }
+            })
+          );
 
           // Add reference text for evidence ZIP
           const mediaFileId = path.basename(message.mediaUrl);
