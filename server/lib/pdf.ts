@@ -8,7 +8,7 @@ import puppeteer from "puppeteer";
 import { v4 as uuidv4 } from "uuid";
 
 // Create PDF directory if it doesn't exist
-const pdfDir = path.join(os.tmpdir(), 'whatspdf', 'pdfs');
+const pdfDir = path.join(os.tmpdir(), "whatspdf", "pdfs");
 if (!fs.existsSync(pdfDir)) {
   fs.mkdirSync(pdfDir, { recursive: true });
 }
@@ -16,16 +16,19 @@ if (!fs.existsSync(pdfDir)) {
 // Generate a PDF from the chat data
 export async function generatePdf(chatData: ChatExport): Promise<string> {
   // Always use PDFLib as Puppeteer has system dependency issues
+  // Additionally, we're now using hyperlinks for voice messages instead of audio controls
   const { pdfPath } = await generatePdfWithPdfLib(chatData);
   return pdfPath;
 }
 
 // Generate a PDF with PDF-lib (no interactive elements)
-async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: string; pdfId: string }> {
+async function generatePdfWithPdfLib(
+  chatData: ChatExport,
+): Promise<{ pdfPath: string; pdfId: string }> {
   const pdfDoc = await PDFDocument.create();
 
   // Add metadata
-  pdfDoc.setTitle(`WhatsApp Chat - ${format(new Date(), 'yyyy-MM-dd')}`);
+  pdfDoc.setTitle(`WhatsApp Chat - ${format(new Date(), "yyyy-MM-dd")}`);
   pdfDoc.setAuthor("WhatsPDF Voice");
   pdfDoc.setCreator("WhatsPDF Voice");
   pdfDoc.setProducer("WhatsPDF Voice");
@@ -33,11 +36,13 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
 
   // Get fonts
   const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const timesRomanBoldFont = await pdfDoc.embedFont(
+    StandardFonts.TimesRomanBold,
+  );
 
   // Define colors
   const primaryColor = rgb(0.17, 0.24, 0.31); // #2C3E50
-  const secondaryColor = rgb(0.20, 0.29, 0.37); // #34495E
+  const secondaryColor = rgb(0.2, 0.29, 0.37); // #34495E
   const textColor = rgb(0.2, 0.2, 0.2); // #333333
 
   // Add first page
@@ -63,7 +68,7 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
   });
 
   // Add metadata
-  page.drawText(`Case Reference: WA-${format(new Date(), 'yyyyMMdd-HHmm')}`, {
+  page.drawText(`Case Reference: WA-${format(new Date(), "yyyyMMdd-HHmm")}`, {
     x: margin,
     y: height - margin - 50,
     size: 10,
@@ -71,7 +76,7 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
     color: textColor,
   });
 
-  page.drawText(`Generated On: ${format(new Date(), 'dd MMM yyyy, HH:mm')}`, {
+  page.drawText(`Generated On: ${format(new Date(), "dd MMM yyyy, HH:mm")}`, {
     x: margin,
     y: height - margin - 65,
     size: 10,
@@ -87,13 +92,16 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
     color: textColor,
   });
 
-  page.drawText(`Participants: ${chatData.participants?.join(', ') || 'Unknown'}`, {
-    x: width - margin - 200,
-    y: height - margin - 65,
-    size: 10,
-    font: timesRomanFont,
-    color: textColor,
-  });
+  page.drawText(
+    `Participants: ${chatData.participants?.join(", ") || "Unknown"}`,
+    {
+      x: width - margin - 200,
+      y: height - margin - 65,
+      size: 10,
+      font: timesRomanFont,
+      color: textColor,
+    },
+  );
 
   // Draw horizontal line
   page.drawLine({
@@ -106,19 +114,21 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
   // Group messages by date
   const messagesByDate: Record<string, Message[]> = {};
   for (const message of chatData.messages) {
-    const date = format(new Date(message.timestamp), 'dd MMMM yyyy');
+    const date = format(new Date(message.timestamp), "dd MMMM yyyy");
     if (!messagesByDate[date]) {
       messagesByDate[date] = [];
     }
     messagesByDate[date].push(message);
   }
 
-  console.log('Grouped messages by date:', {
+  console.log("Grouped messages by date:", {
     totalDates: Object.keys(messagesByDate).length,
-    messagesByDateSample: Object.entries(messagesByDate).slice(0, 2).map(([date, msgs]) => ({
-      date,
-      messageCount: msgs.length
-    }))
+    messagesByDateSample: Object.entries(messagesByDate)
+      .slice(0, 2)
+      .map(([date, msgs]) => ({
+        date,
+        messageCount: msgs.length,
+      })),
   });
 
   // Start position for messages
@@ -153,7 +163,7 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
       }
 
       // Format timestamp
-      const timestamp = format(new Date(message.timestamp), 'HH:mm');
+      const timestamp = format(new Date(message.timestamp), "HH:mm");
 
       // Draw timestamp and sender
       currentPage.drawText(timestamp, {
@@ -169,16 +179,19 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
         y,
         size: 10,
         font: timesRomanBoldFont,
-        color: message.sender === chatData.participants?.[0] ? primaryColor : secondaryColor,
+        color:
+          message.sender === chatData.participants?.[0]
+            ? primaryColor
+            : secondaryColor,
       });
 
       y -= 15;
 
       // Draw message content
-      if (message.type === 'text') {
+      if (message.type === "text") {
         // Split long messages
-        const words = message.content.split(' ');
-        let line = '';
+        const words = message.content.split(" ");
+        let line = "";
         let lineY = y;
 
         for (const word of words) {
@@ -219,18 +232,61 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
         }
 
         y = lineY - 20;
-      } else if (message.type === 'voice') {
-        // Draw a placeholder for voice message
-        currentPage.drawText("[Voice Message]", {
-          x: margin + 20,
-          y,
-          size: 10,
-          font: timesRomanBoldFont,
-          color: rgb(0.2, 0.6, 0.86), // #3498DB
-        });
+      } else if (message.type === "voice") {
+        // Create a hyperlink to the voice message
+        if (message.mediaUrl) {
+          // Create hyperlink annotation - make it clickable
+          const mediaFileId = path.basename(message.mediaUrl);
+          const playText = "▶ Play Voice Message";
+          
+          currentPage.drawText(playText, {
+            x: margin + 20,
+            y,
+            size: 10,
+            font: timesRomanBoldFont,
+            color: rgb(0.2, 0.6, 0.86), // #3498DB
+          });
+          
+          const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
+          const linkHeight = 12;
+          
+          // Create a URI link annotation for the media file
+          const linkX = margin + 20;
+          const linkY = y - 2;
+          const linkWidth = textWidth;
+          const linkEndX = linkX + linkWidth;
+          const linkEndY = linkY + linkHeight;
+                    
+          pdfDoc.addPage(); // This is temporary
+          const tempPage = pdfDoc.removePage(pdfDoc.getPageCount() - 1); // Remove it
+          
+          // Add hyperlink using the URI action
+          const mediaUrl = `/media/${chatData.id}/${mediaFileId}`;
+          currentPage.node.addAnnot({
+            Type: 'Annot',
+            Subtype: 'Link',
+            Rect: [linkX, linkY, linkEndX, linkEndY],
+            Border: [0, 0, 0],
+            C: [0, 0, 1], // RGB color for border - blue
+            A: {
+              Type: 'Action',
+              S: 'URI',
+              URI: PDFString.of(mediaUrl),
+            },
+          });
+        } else {
+          // Fallback for voice messages without a media URL
+          currentPage.drawText("[Voice Message]", {
+            x: margin + 20,
+            y,
+            size: 10,
+            font: timesRomanBoldFont,
+            color: rgb(0.2, 0.6, 0.86), // #3498DB
+          });
+        }
 
         y -= 20;
-      } else if (message.type === 'image') {
+      } else if (message.type === "image") {
         // Draw a placeholder for image
         currentPage.drawText("[Image Attachment]", {
           x: margin + 20,
@@ -241,7 +297,7 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
         });
 
         y -= 20;
-      } else if (message.type === 'attachment') {
+      } else if (message.type === "attachment") {
         // Draw a placeholder for other attachments
         currentPage.drawText("[File Attachment]", {
           x: margin + 20,
@@ -272,14 +328,14 @@ async function generatePdfWithPdfLib(chatData: ChatExport): Promise<{ pdfPath: s
   }
 
   // Save PDF
-  console.log('Saving PDF document...');
+  console.log("Saving PDF document...");
   const pdfBytes = await pdfDoc.save();
   const pdfId = uuidv4();
   const pdfPath = path.join(pdfDir, `${pdfId}.pdf`);
-  console.log('Writing PDF to path:', pdfPath);
+  console.log("Writing PDF to path:", pdfPath);
   fs.writeFileSync(pdfPath, pdfBytes);
-  console.log('PDF file written successfully');
-  console.log('PDF details:', { pdfId, pdfPath, size: pdfBytes.length });
+  console.log("PDF file written successfully");
+  console.log("PDF details:", { pdfId, pdfPath, size: pdfBytes.length });
 
   return { pdfPath, pdfId };
 }
@@ -298,24 +354,24 @@ async function generatePdfWithPuppeteer(chatData: ChatExport): Promise<string> {
     // Launch Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     try {
       const page = await browser.newPage();
-      await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle2' });
+      await page.goto(`file://${htmlPath}`, { waitUntil: "networkidle2" });
 
       // Generate PDF
       await page.pdf({
         path: pdfPath,
-        format: 'A4',
+        format: "A4",
         printBackground: true,
         margin: {
-          top: '50px',
-          right: '50px',
-          bottom: '50px',
-          left: '50px'
-        }
+          top: "50px",
+          right: "50px",
+          bottom: "50px",
+          left: "50px",
+        },
       });
 
       return pdfPath;
@@ -335,7 +391,7 @@ function generateHTML(chatData: ChatExport): string {
   // Group messages by date
   const messagesByDate: Record<string, Message[]> = {};
   for (const message of chatData.messages) {
-    const date = format(new Date(message.timestamp), 'dd MMMM yyyy');
+    const date = format(new Date(message.timestamp), "dd MMMM yyyy");
     if (!messagesByDate[date]) {
       messagesByDate[date] = [];
     }
@@ -348,7 +404,7 @@ function generateHTML(chatData: ChatExport): string {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>WhatsApp Chat - ${format(new Date(), 'yyyy-MM-dd')}</title>
+      <title>WhatsApp Chat - ${format(new Date(), "yyyy-MM-dd")}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Source+Sans+Pro:wght@400;600;700&display=swap');
 
@@ -516,10 +572,10 @@ function generateHTML(chatData: ChatExport): string {
           <h2>WhatsApp Conversation</h2>
 
           <div class="metadata">
-            <p><span class="label">Case Reference:</span> WA-${format(new Date(), 'yyyyMMdd-HHmm')}</p>
+            <p><span class="label">Case Reference:</span> WA-${format(new Date(), "yyyyMMdd-HHmm")}</p>
             <p><span class="label">File SHA-256:</span> ${chatData.fileHash.substring(0, 10)}...</p>
-            <p><span class="label">Generated On:</span> ${format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
-            <p><span class="label">Participants:</span> ${chatData.participants?.join(', ') || 'Unknown'}</p>
+            <p><span class="label">Generated On:</span> ${format(new Date(), "dd MMM yyyy, HH:mm")}</p>
+            <p><span class="label">Participants:</span> ${chatData.participants?.join(", ") || "Unknown"}</p>
           </div>
         </div>
 
@@ -535,8 +591,9 @@ function generateHTML(chatData: ChatExport): string {
 
     messages.forEach((message, messageIndex) => {
       messageCount++;
-      const senderIndex = chatData.participants?.indexOf(message.sender) === 0 ? 1 : 2;
-      const timestamp = format(new Date(message.timestamp), 'HH:mm');
+      const senderIndex =
+        chatData.participants?.indexOf(message.sender) === 0 ? 1 : 2;
+      const timestamp = format(new Date(message.timestamp), "HH:mm");
 
       html += `
         <div class="message">
@@ -547,26 +604,28 @@ function generateHTML(chatData: ChatExport): string {
           <div class="message-bubble sender-${senderIndex}-bubble">
       `;
 
-      if (message.type === 'text') {
+      if (message.type === "text") {
         html += `<div class="message-content">${escapeHtml(message.content)}</div>`;
-      } else if (message.type === 'voice' && message.mediaUrl) {
+      } else if (message.type === "voice" && message.mediaUrl) {
         const duration = message.duration || 0;
         const formattedDuration = formatDuration(duration);
 
         html += `
-          <div class="audio-player">
-            <button class="play-button">
-              <svg viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </button>
-            <div class="audio-progress"></div>
-            <span class="audio-duration">${formattedDuration}</span>
+          <div class="message-content">
+            <!-- native audio control; will be clickable in the PDF -->
+            <audio controls style="width: 100%; max-width: 400px;">
+              <source src="${message.mediaUrl}" type="audio/ogg">
+              <!-- fallback link for older viewers -->
+              Your browser doesn’t support audio playback.
+            </audio>
+            <div style="font-size:12px; color:#888; margin-top:4px;">
+              Duration: ${formattedDuration}
+            </div>
           </div>
         `;
-      } else if (message.type === 'image' && message.mediaUrl) {
+      } else if (message.type === "image" && message.mediaUrl) {
         html += `<div class="message-content">[Image Attachment]</div>`;
-      } else if (message.type === 'attachment' && message.mediaUrl) {
+      } else if (message.type === "attachment" && message.mediaUrl) {
         html += `<div class="message-content">[File Attachment]</div>`;
       }
 
@@ -576,8 +635,13 @@ function generateHTML(chatData: ChatExport): string {
       `;
 
       // Add page breaks approximately every 25 messages
-      if (messageCount % 25 === 0 && !(dateIndex === Object.keys(messagesByDate).length - 1 && 
-          messageIndex === messages.length - 1)) {
+      if (
+        messageCount % 25 === 0 &&
+        !(
+          dateIndex === Object.keys(messagesByDate).length - 1 &&
+          messageIndex === messages.length - 1
+        )
+      ) {
         const pageNum = Math.ceil(messageCount / 25);
         const totalPages = Math.ceil(chatData.messages.length / 25);
 
@@ -616,5 +680,5 @@ function escapeHtml(text: string): string {
 function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
