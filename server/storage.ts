@@ -25,16 +25,11 @@ const mediaDir = path.join(baseDir, 'media');
 
 // Define media file metadata structure
 export interface MediaFile {
-  id: string;
-  key: string;
-  chatExportId: number;
-  messageId?: number;
-  originalName: string;
-  contentType: string;
-  size: number;
-  uploadedAt: string;
-  url?: string;
-  type: 'voice' | 'image' | 'attachment' | 'pdf';
+  id: string;          // Unique identifier for the media file (used for proxy URLs)
+  key: string;         // R2 storage key
+  url?: string;        // Direct R2 URL (for internal use only)
+  type: 'voice';       // Only storing voice messages
+  createdAt: string;   // Timestamp for deletion policy
 }
 
 // Storage interface
@@ -151,6 +146,8 @@ export class MemStorage implements IStorage {
 
   /**
    * Upload a media file to R2 storage
+   * Only voice files will be stored in R2 for privacy reasons.
+   * PDFs are generated on-demand and not stored.
    */
   async uploadMediaToR2(
     filePath: string, 
@@ -160,35 +157,50 @@ export class MemStorage implements IStorage {
     type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment'
   ): Promise<MediaFile> {
     try {
-      // Get file stats
+      // Only store voice files in R2
+      if (type !== 'voice') {
+        console.log(`Skipping upload of non-voice file: ${filePath} (type: ${type})`);
+        
+        // For PDFs, we still need to return a MediaFile object with an ID
+        // but we don't actually store anything in R2
+        if (type === 'pdf') {
+          const mediaFile: MediaFile = {
+            id: uuidv4(),
+            key: '',  // Empty key since we're not storing
+            type: 'voice', // Dummy value since we only store voice
+            createdAt: new Date().toISOString(),
+          };
+          return mediaFile;
+        }
+        
+        throw new Error(`Only voice files are stored in R2. Type provided: ${type}`);
+      }
+      
+      // For voice files, proceed with upload
       const stats = fs.statSync(filePath);
-      const originalName = path.basename(filePath);
-
-      // Upload to R2
-      const directory = `chats/${chatExportId}/${type}`;
-      const key = await uploadFileToR2(filePath, contentType, directory);
+      
+      // Use a simpler, privacy-focused directory structure with just UUIDs
+      // This helps ensure no identifiable information in the paths
+      const mediaId = uuidv4();
+      const directory = `voice-messages`;
+      const key = await uploadFileToR2(filePath, contentType, directory, mediaId);
       
       // Get signed URL
       const url = await getSignedR2Url(key);
       
-      // Create media file record
+      // Create minimal media file record
       const mediaFile: MediaFile = {
-        id: uuidv4(),
+        id: mediaId,
         key,
-        chatExportId,
-        messageId,
-        originalName,
-        contentType,
-        size: stats.size,
-        uploadedAt: new Date().toISOString(),
         url,
-        type
+        type: 'voice',
+        createdAt: new Date().toISOString()
       };
       
       // Store in memory
       this.mediaFiles.set(mediaFile.id, mediaFile);
       
-      console.log(`Uploaded media file to R2: ${key}`);
+      console.log(`Uploaded voice file to R2: ${key}`);
       return mediaFile;
     } catch (error) {
       console.error("Error uploading media to R2:", error);
@@ -201,8 +213,8 @@ export class MemStorage implements IStorage {
    */
   async getMediaUrl(mediaId: string): Promise<string> {
     const mediaFile = this.mediaFiles.get(mediaId);
-    if (!mediaFile) {
-      throw new Error(`Media file not found: ${mediaId}`);
+    if (!mediaFile || !mediaFile.key) {
+      throw new Error(`Media file not found or has no key: ${mediaId}`);
     }
     
     // Generate a fresh signed URL
@@ -217,12 +229,15 @@ export class MemStorage implements IStorage {
 
   /**
    * Delete a media file from R2
+   * Also implements auto-cleanup for files older than X months
    */
   async deleteMedia(mediaId: string): Promise<boolean> {
     const mediaFile = this.mediaFiles.get(mediaId);
-    if (!mediaFile) {
-      throw new Error(`Media file not found: ${mediaId}`);
+    if (!mediaFile || !mediaFile.key) {
+      throw new Error(`Media file not found or has no key: ${mediaId}`);
     }
+    
+    console.log(`Deleting media file from R2: ${mediaFile.key}`);
     
     // Delete from R2
     await deleteFileFromR2(mediaFile.key);
@@ -230,30 +245,23 @@ export class MemStorage implements IStorage {
     // Remove from our records
     this.mediaFiles.delete(mediaId);
     
-    // If this media is associated with a message, update the message
-    if (mediaFile.messageId) {
-      const message = this.messages.get(mediaFile.messageId);
-      if (message) {
-        message.mediaUrl = null; // Set to null, not undefined
-        this.messages.set(mediaFile.messageId, message);
-      }
-    }
-    
     return true;
   }
 
   /**
-   * Get all media files for a chat export
+   * Get all media files (no longer filtered by chat export ID since we don't store that)
+   * This is mostly for administrative purposes
    */
   async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
-    // Filter media files by chat export ID
-    const mediaFiles = Array.from(this.mediaFiles.values())
-      .filter(media => media.chatExportId === chatExportId);
+    console.log("Note: getMediaFilesByChat is deprecated as we no longer store chat associations");
+    
+    // Return all media files since we don't track chat ID anymore
+    const mediaFiles = Array.from(this.mediaFiles.values());
     
     // Create an array of promises to refresh URLs
     const refreshPromises = mediaFiles.map(async (media) => {
       // Refresh URL if it's expired or missing
-      if (!media.url) {
+      if (media.key && !media.url) {
         media.url = await getSignedR2Url(media.key);
         this.mediaFiles.set(media.id, media);
       }
@@ -269,15 +277,50 @@ export class MemStorage implements IStorage {
    */
   async getMediaFile(mediaId: string): Promise<MediaFile | undefined> {
     const mediaFile = this.mediaFiles.get(mediaId);
-    if (mediaFile && !mediaFile.url) {
+    if (mediaFile && mediaFile.key && !mediaFile.url) {
       mediaFile.url = await getSignedR2Url(mediaFile.key);
       this.mediaFiles.set(mediaId, mediaFile);
     }
     return mediaFile;
   }
+  
+  /**
+   * Clean up old voice messages
+   * This would typically be called by a scheduled job
+   * For this implementation, we'll just log what would be cleaned up
+   * @param ageInMonths How many months old files should be deleted
+   */
+  async cleanupOldVoiceMessages(ageInMonths: number = 3): Promise<number> {
+    const now = new Date();
+    let cleanupCount = 0;
+    
+    for (const [mediaId, mediaFile] of this.mediaFiles.entries()) {
+      // Skip files with no created date or key
+      if (!mediaFile.createdAt || !mediaFile.key) continue;
+      
+      const createdDate = new Date(mediaFile.createdAt);
+      const ageInMs = now.getTime() - createdDate.getTime();
+      const ageInDays = ageInMs / (1000 * 60 * 60 * 24);
+      
+      // If older than X months (approximately)
+      if (ageInDays > ageInMonths * 30) {
+        console.log(`Would delete old voice message: ${mediaFile.key} (created: ${mediaFile.createdAt})`);
+        
+        // In a real implementation, we would delete the file from R2
+        // await deleteFileFromR2(mediaFile.key);
+        // this.mediaFiles.delete(mediaId);
+        
+        cleanupCount++;
+      }
+    }
+    
+    console.log(`Found ${cleanupCount} voice messages older than ${ageInMonths} months that would be deleted`);
+    return cleanupCount;
+  }
 
   /**
    * Update a message with R2 media URL
+   * This is simplified to only handle voice messages with our privacy-focused approach
    */
   async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
     const message = this.messages.get(messageId);
@@ -288,45 +331,28 @@ export class MemStorage implements IStorage {
         ? `https://${process.env.REPLIT_DOMAINS}`
         : 'http://localhost:5000'; // Fallback for local development
       
-      // Find or create a media file entry for this message
-      let mediaId: string;
-      const existingMedia = Array.from(this.mediaFiles.values())
-        .find(m => m.messageId === messageId);
-      
-      if (!existingMedia) {
-        mediaId = uuidv4();
-        let contentType = "application/octet-stream";
-        let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment';
-        
-        // Determine content type and type from message
-        if (message.type === 'voice') {
-          contentType = "audio/ogg";
-          type = 'voice';
-        } else if (message.type === 'image') {
-          contentType = "image/jpeg";
-          type = 'image';
-        }
-        
-        const mediaFile: MediaFile = {
-          id: mediaId,
-          key: r2Key,
-          chatExportId: message.chatExportId,
-          messageId,
-          originalName: path.basename(r2Key),
-          contentType,
-          size: 0, // We don't know the size
-          uploadedAt: new Date().toISOString(),
-          url: r2Url, // Store original R2 URL for direct access if needed
-          type
-        };
-        
-        this.mediaFiles.set(mediaId, mediaFile);
-      } else {
-        mediaId = existingMedia.id;
+      // Only handle voice messages
+      if (message.type !== 'voice') {
+        console.log(`Skipping non-voice message: ${messageId}`);
+        return;
       }
       
-      // Instead of using the direct R2 URL, store a reference to our proxy endpoint
-      // This ensures the links in the PDF will always be valid
+      // Create a new media file entry with minimal data
+      const mediaId = uuidv4();
+      
+      // Create a minimal record for the media file
+      const mediaFile: MediaFile = {
+        id: mediaId,
+        key: r2Key,
+        url: r2Url,  // Store original R2 URL for internal use
+        type: 'voice',
+        createdAt: new Date().toISOString()
+      };
+      
+      // Store the media file record
+      this.mediaFiles.set(mediaId, mediaFile);
+      
+      // Set the message's mediaUrl to our proxy endpoint
       message.mediaUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`;
       console.log(`Setting message ${messageId} media URL to proxy: ${message.mediaUrl}`);
       this.messages.set(messageId, message);
