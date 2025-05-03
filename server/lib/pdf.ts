@@ -252,10 +252,10 @@ async function generatePdfWithPdfLib(
           const linkX = margin + 20;
           const linkY = y - 2;
           
-          // Generate a longer-lived signed URL for PDF links (24 hours)
+          // Generate a longer-lived signed URL for PDF links (90 days)
           const pdfSignedUrl = await getSignedR2Url(
             path.basename(message.mediaUrl),
-            60 * 60 * 24 // 24 hours
+            60 * 60 * 24 * 90 // 90 days
           );
 
           // Create and register the annotation with correct structure

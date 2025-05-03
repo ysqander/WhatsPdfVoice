@@ -215,12 +215,14 @@ export const uploadController = {
             try {
               // Upload PDF to R2
               const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', path.basename(pdfResult));
+              // Upload PDF to R2 with 90-day signed URL
               const pdfMediaFile = await storage.uploadMediaToR2(
                 pdfPath,
                 'application/pdf',
                 savedChatExport.id!,
                 undefined,
-                'pdf'
+                'pdf',
+                60 * 60 * 24 * 90 // 90 days expiration
               );
               pdfUrl = pdfMediaFile.url!;
               console.log('Uploaded PDF to R2:', pdfMediaFile.key);
