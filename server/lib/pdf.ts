@@ -251,8 +251,8 @@ async function generatePdfWithPdfLib(
           const linkX = margin + 20;
           const linkY = y - 2;
           
-          // Create and register the annotation
-          const linkAnnotation = pdfDoc.context.register(
+          // Create and register the annotation with correct structure
+          const linkAnnotationRef = pdfDoc.context.register(
             pdfDoc.context.obj({
               Type: 'Annot',
               Subtype: 'Link',
@@ -261,16 +261,24 @@ async function generatePdfWithPdfLib(
               A: {
                 Type: 'Action',
                 S: 'URI',
-                URI: message.mediaUrl,
+                URI: pdfDoc.context.obj(message.mediaUrl)
               }
             })
           );
 
-          // Attach it to the page
-          currentPage.node.set(
-            PDFName.of('Annots'),
-            pdfDoc.context.obj([linkAnnotation])
-          );
+          // Get existing annotations or create new array
+          let annots = currentPage.node.lookup(PDFName.of('Annots'));
+          
+          if (annots instanceof PDFArray) {
+            // Push onto existing array
+            annots.push(linkAnnotationRef);
+          } else {
+            // Create new annotations array
+            currentPage.node.set(
+              PDFName.of('Annots'),
+              pdfDoc.context.obj([linkAnnotationRef])
+            );
+          }
 
           // Add reference text for evidence ZIP
           const mediaFileId = path.basename(message.mediaUrl);
