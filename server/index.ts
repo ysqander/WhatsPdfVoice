@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -36,6 +37,29 @@ app.use((req, res, next) => {
   next();
 });
 
+// Schedule media cleanup to run periodically
+function scheduleMediaCleanup() {
+  // Run immediately on startup (with a small delay to ensure DB connection is ready)
+  setTimeout(async () => {
+    try {
+      const deletedCount = await storage.cleanupExpiredMedia();
+      log(`Media cleanup: deleted ${deletedCount} expired files`);
+    } catch (error) {
+      console.error("Error during media cleanup:", error);
+    }
+  }, 10000); // Wait 10 seconds after startup
+
+  // Then set up recurring cleanup every 12 hours
+  setInterval(async () => {
+    try {
+      const deletedCount = await storage.cleanupExpiredMedia();
+      log(`Media cleanup: deleted ${deletedCount} expired files`);
+    } catch (error) {
+      console.error("Error during media cleanup:", error);
+    }
+  }, 12 * 60 * 60 * 1000); // 12 hours
+}
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -46,6 +70,9 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Set up media cleanup task
+  scheduleMediaCleanup();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

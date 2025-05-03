@@ -30,37 +30,36 @@ import { formatDistanceToNow } from "date-fns";
 interface MediaFile {
   id: string;
   key: string;
-  chatExportId: number;
-  messageId?: number;
   originalName: string;
   contentType: string;
   size: number;
   uploadedAt: string;
+  expiresAt?: string;
   url?: string;
   type: 'voice' | 'image' | 'attachment' | 'pdf';
 }
 
 interface MediaListProps {
-  chatId?: number;
+  sessionId?: number; // Just a reference ID, not storing actual chat data anymore
   onDeleteMedia?: () => void;
 }
 
-export default function MediaList({ chatId, onDeleteMedia }: MediaListProps) {
+export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
 
-  // Fetch media files for the chat
+  // Fetch media files for the session
   const fetchMediaFiles = async () => {
-    if (!chatId) return;
+    if (!sessionId) return;
     
     try {
       setLoading(true);
       setError(null);
       
       const response = await apiRequest({
-        url: `/api/media/${chatId}`,
+        url: `/api/media/session/${sessionId}`,
         method: "GET",
       });
       

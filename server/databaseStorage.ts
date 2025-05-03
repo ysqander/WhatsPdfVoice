@@ -224,36 +224,53 @@ export class DatabaseStorage implements IStorage {
     return deletedCount;
   }
   
-  // Provide stubs for the IStorage interface methods that we're not using anymore
-  async saveChatExport() {
-    throw new Error("Method not supported: saveChatExport - We no longer store chat data for privacy reasons");
+  // Implement required interface methods with stubs that return minimal data
+  // to maintain compatibility with existing code, but don't actually store private data
+  
+  async saveChatExport(data: any): Promise<any> {
+    console.log("Privacy notice: Not storing chat data, only session ID for media organization");
+    // Return a minimal object with just an ID for tracking
+    return { id: Date.now() };
   }
   
-  async getChatExport() {
-    throw new Error("Method not supported: getChatExport - We no longer store chat data for privacy reasons");
+  async getChatExport(id: number): Promise<any> {
+    console.log(`Privacy notice: Not retrieving chat data for ID ${id}`);
+    // Return a minimal object
+    return { id, processingOptions: {}, messages: [] };
   }
   
-  async saveMessage() {
-    throw new Error("Method not supported: saveMessage - We no longer store message data for privacy reasons");
+  async saveMessage(message: any): Promise<any> {
+    console.log("Privacy notice: Not storing message data");
+    // Return minimal data needed by the interface
+    return { id: Date.now() };
   }
   
-  async getMessagesByChatExportId() {
-    throw new Error("Method not supported: getMessagesByChatExportId - We no longer store message data for privacy reasons");
+  async getMessagesByChatExportId(chatExportId: number): Promise<any[]> {
+    console.log(`Privacy notice: Not retrieving messages for ID ${chatExportId}`);
+    // Return empty array - no messages stored
+    return [];
   }
   
-  async getLatestChatExport() {
-    throw new Error("Method not supported: getLatestChatExport - We no longer store chat data for privacy reasons");
+  async getLatestChatExport(): Promise<any> {
+    console.log("Privacy notice: Not retrieving chat data");
+    // Return minimal object
+    return { id: Date.now(), processingOptions: {}, messages: [] };
   }
   
-  async savePdfUrl() {
-    throw new Error("Method not supported: savePdfUrl - We no longer store PDF data for privacy reasons");
+  async savePdfUrl(chatExportId: number, pdfUrl: string): Promise<void> {
+    console.log(`Privacy notice: Not storing PDF URL for ID ${chatExportId}`);
+    // Do nothing, we don't store PDF URLs
   }
   
-  async getMediaFilesByChat() {
-    throw new Error("Method not supported: getMediaFilesByChat - We no longer store chat data for privacy reasons");
+  async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
+    console.log(`Privacy notice: No longer associate media with chat ID ${chatExportId}`);
+    // Return empty array - privacy policy
+    return [];
   }
   
-  async updateMessageMediaUrl() {
-    throw new Error("Method not supported: updateMessageMediaUrl - We no longer store message data for privacy reasons");
+  async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
+    console.log(`Privacy notice: Not storing message URL mapping`);
+    // Instead of storing message data, we could potentially register just the proxy
+    // URL in the database if needed, but we don't associate it with message content
   }
 }
