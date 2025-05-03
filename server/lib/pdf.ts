@@ -1,5 +1,5 @@
 import { ChatExport, Message } from "@shared/types";
-import { PDFDocument, StandardFonts, rgb, PDFName } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFName, PDFArray } from "pdf-lib";
 import fs from "fs";
 import path from "path";
 import os from "os";
