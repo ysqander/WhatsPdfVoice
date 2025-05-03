@@ -237,7 +237,7 @@ async function generatePdfWithPdfLib(
         if (message.mediaUrl) {
           // Create hyperlink annotation - make it clickable
           const mediaFileId = path.basename(message.mediaUrl);
-          const playText = "▶ Play Voice Message";
+          const playText = "► Play Voice Message";
           
           currentPage.drawText(playText, {
             x: margin + 20,
