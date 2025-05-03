@@ -253,23 +253,40 @@ async function generatePdfWithPdfLib(
           const linkX = margin + 20;
           const linkY = y - 2;
           
-          // Generate a longer-lived signed URL for PDF links (90 days)
-          const pdfSignedUrl = await getSignedR2Url(
-            path.basename(message.mediaUrl),
-            60 * 60 * 24 * 90 // 90 days
-          );
+          // For voice messages with an R2-stored media, use our proxy endpoint
+          let messageId: string | number | undefined;
+          let proxyUrl: string;
+          
+          // If this is an R2 URL, extract the mediaId from our storage
+          if (message.id) {
+            messageId = message.id;
+            const mediaFiles = await storage.getMediaFilesByChat(chatData.id!);
+            // Find the media file associated with this message
+            const mediaFile = mediaFiles.find(file => file.messageId === messageId);
+            
+            if (mediaFile) {
+              // Use our proxy endpoint which will generate fresh signed URLs on demand
+              proxyUrl = `/api/media/proxy/${mediaFile.id}`;
+            } else {
+              // Fallback - use the original media URL as a local path
+              proxyUrl = message.mediaUrl;
+            }
+          } else {
+            // Fallback - use the original media URL as a local path
+            proxyUrl = message.mediaUrl;
+          }
 
-          // Create and register the annotation with correct structure
+          // Create and register the annotation with correct structure using PDFName and PDFString
           const linkAnnotationRef = pdfDoc.context.register(
             pdfDoc.context.obj({
-              Type: 'Annot',
-              Subtype: 'Link',
+              Type: PDFName.of('Annot'),
+              Subtype: PDFName.of('Link'),
               Rect: [linkX, linkY, linkX + textWidth, linkY + linkHeight],
               Border: [0, 0, 0],
               A: {
-                Type: 'Action',
-                S: 'URI',
-                URI: pdfDoc.context.obj(pdfSignedUrl)
+                Type: PDFName.of('Action'),
+                S: PDFName.of('URI'),
+                URI: PDFString.of(proxyUrl)
               }
             })
           );
@@ -288,10 +305,16 @@ async function generatePdfWithPdfLib(
             );
           }
 
-          // Add reference text for evidence ZIP
-          const mediaFileId = path.basename(message.mediaUrl);
-          const mediaUrl = `/media/${chatData.id}/${mediaFileId}`;
-          currentPage.drawText("(See voice note at: " + mediaUrl + ")", {
+          // Add reference text for evidence ZIP that references our permanent proxy URL
+          let referenceText = "(See voice note via proxy)";
+          
+          // If we have a media file ID, add that as a reference
+          if (proxyUrl.includes('/api/media/proxy/')) {
+            const mediaId = proxyUrl.split('/').pop();
+            referenceText = `(Voice ID: ${mediaId})`;
+          }
+          
+          currentPage.drawText(referenceText, {
             x: margin + 20,
             y: y - 15,
             size: 8,

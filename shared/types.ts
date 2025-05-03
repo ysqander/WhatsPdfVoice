@@ -9,12 +9,14 @@ export interface ProcessingOptions {
 }
 
 export interface Message {
+  id?: number;
   timestamp: string;
   sender: string;
   content: string;
   type: 'text' | 'voice' | 'image' | 'attachment';
   mediaUrl?: string;
   duration?: number;
+  chatExportId?: number;
 }
 
 export interface ChatExport {
