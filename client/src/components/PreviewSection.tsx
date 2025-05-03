@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, SquareMinus, SearchCode } from "lucide-react";
+import { ChevronLeft, ChevronRight, SquareMinus, SearchCode, Download, Archive } from "lucide-react";
 import PDFPreview from "./PDFPreview";
 import { ChatExport } from "@shared/types";
+import { Button } from "./ui/button";
 
 interface PreviewSectionProps {
   chatData: ChatExport | null;

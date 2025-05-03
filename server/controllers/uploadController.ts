@@ -9,6 +9,7 @@ import path from "path";
 import crypto from "crypto";
 import archiver from "archiver";
 import os from "os";
+import { format } from "date-fns";
 
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
@@ -109,7 +110,7 @@ export const uploadController = {
           console.log('Parse completed successfully');
           chatData.fileHash = fileHash;
           chatData.originalFilename = req.file!.originalname;
-          chatData.processingOptions = options;
+          chatData.processingOptions = JSON.stringify(options);
           
           // Save chat export to storage
           const savedChatExport = await storage.saveChatExport(chatData);
