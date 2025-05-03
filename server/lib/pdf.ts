@@ -254,7 +254,6 @@ async function generatePdfWithPdfLib(
           const linkY = y - 2;
           
           // For voice messages with an R2-stored media, use our proxy endpoint
-          let messageId: string | number | undefined;
           let proxyUrl: string;
           
           // Determine the base URL of our application for absolute URLs
@@ -265,12 +264,18 @@ async function generatePdfWithPdfLib(
           
           console.log(`Using app base URL: ${appBaseUrl}`);
           
-          // If this is an R2 URL, extract the mediaId from our storage
-          if (message.id) {
-            messageId = message.id;
-            const mediaFiles = await storage.getMediaFilesByChat(chatData.id!);
-            // Find the media file associated with this message
-            const mediaFile = mediaFiles.find(file => file.messageId === messageId);
+          // For voice messages, look up the corresponding media file
+          if (message.type === 'voice') {
+            // In our privacy-focused approach, we don't directly link media files to messages
+            // Instead we get all media files for the session and do content-based matching
+            const sessionId = chatData.id;
+            const mediaFiles = await storage.getMediaFilesByChat(sessionId!);
+            
+            // Match media files by type and filename patterns
+            // Voice messages typically have a pattern in the original filename
+            const mediaFile = mediaFiles.find(file => 
+              file.type === 'voice' && 
+              file.originalName.includes(message.content.substring(0, 10)));
             
             if (mediaFile) {
               // Use our proxy endpoint which will generate fresh signed URLs on demand
