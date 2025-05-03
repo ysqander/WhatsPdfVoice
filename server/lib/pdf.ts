@@ -233,12 +233,10 @@ async function generatePdfWithPdfLib(
 
         y = lineY - 20;
       } else if (message.type === "voice") {
-        // Create a hyperlink to the voice message
         if (message.mediaUrl) {
-          // Create hyperlink annotation - make it clickable
-          const mediaFileId = path.basename(message.mediaUrl);
-          const playText = "> Play Voice Message";
+          const playText = "▶ Play Voice Message";
           
+          // Draw the link text
           currentPage.drawText(playText, {
             x: margin + 20,
             y,
@@ -247,24 +245,27 @@ async function generatePdfWithPdfLib(
             color: rgb(0.2, 0.6, 0.86), // #3498DB
           });
           
+          // Compute link bounds
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
           const linkHeight = 12;
-          
-          // Create a URI link annotation for the media file
           const linkX = margin + 20;
           const linkY = y - 2;
-          const linkWidth = textWidth;
-          const linkEndX = linkX + linkWidth;
-          const linkEndY = linkY + linkHeight;
-                    
-          // For PDFLib, we'll embed a URL reference in the text itself
-          // Since direct link annotations are more complex, we'll simplify by using a special format
-          // that indicates the media file location for the Evidence ZIP feature later
           
-          // Add a special identifier before voice message
+          // Add clickable link annotation
+          page.addAnnotation({
+            type: 'link',
+            rectangle: { 
+              x: linkX, 
+              y: linkY, 
+              width: textWidth, 
+              height: linkHeight 
+            },
+            url: message.mediaUrl
+          });
+
+          // Add reference text for evidence ZIP
+          const mediaFileId = path.basename(message.mediaUrl);
           const mediaUrl = `/media/${chatData.id}/${mediaFileId}`;
-          
-          // This text will be used to identify the voice message link when creating the evidence ZIP
           currentPage.drawText("(See voice note at: " + mediaUrl + ")", {
             x: margin + 20,
             y: y - 15,
