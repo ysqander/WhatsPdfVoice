@@ -99,6 +99,21 @@ async function parseTextChat(filePath: string, extractDir: string, options: Proc
 
   const messageRegex = /^\s*\[(\d{2}\.\d{2}\.\d{2}),\s*(\d{2}:\d{2}:\d{2})\]\s*([^:]+):\s*(.*)$/;
   const attachmentRegex = /<attached:\s*([^>]+)>/i;
+  const systemMessagePatterns = [
+    /Messages and calls are end-to-end encrypted/i,
+    /You changed this group's/i,
+    /.*created group.*\./i,
+    /.*was added\./i,
+    /.*left\./i,
+    /.*removed\./i,
+    /.*changed their phone number\./i,
+    /.*changed the subject/i,
+    /.*changed the group description\./i,
+    /.*changed the group icon\./i,
+    /.*security code changed\./i,
+    /.*joined using this group's invite link\./i
+  ];
+  
   const parsedMessages: Message[] = [];
   let lastMsg: Message | null = null;
   const participants = new Set<string>();
@@ -110,6 +125,13 @@ async function parseTextChat(filePath: string, extractDir: string, options: Proc
     const m = line.match(messageRegex);
     if (m) {
       const [, date, time, sender, rawContent] = m;
+      
+      // Filter out system messages
+      if (systemMessagePatterns.some(pattern => pattern.test(rawContent))) {
+        lastMsg = null;
+        continue;
+      }
+      
       // build ISO timestamp
       const [d, mo, y] = date.split('.');
       const iso = `20${y}-${mo}-${d}T${time}`;
