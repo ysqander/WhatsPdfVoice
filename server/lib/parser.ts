@@ -14,8 +14,8 @@ if (!fs.existsSync(tempDir)) {
 }
 
 // Regex patterns for parsing text chat
-const messageRegex = /^\[?(\d{2}\.\d{2}\.\d{2}),?\s*(\d{2}:\d{2}:\d{2})\]?\s+([^:]+):\s*(.*)$/;
-const dateRegex = /(\d{2})\.(\d{2})\.(\d{2}),?\s*(\d{2}):(\d{2}):(\d{2})/;
+const messageRegex = /^\[(\d{2}\.\d{2}\.\d{2}),\s*(\d{2}:\d{2}:\d{2})\]\s+([^:]+):\s*(.*)$/;
+const dateRegex = /(\d{2})\.(\d{2})\.(\d{2}),\s*(\d{2}):(\d{2}):(\d{2})/;
 
 // Parse WhatsApp chat export ZIP file
 export async function parse(filePath: string, options: ProcessingOptions): Promise<ChatExport> {
@@ -112,8 +112,8 @@ async function parseTextChat(filePath: string, extractDir: string, options: Proc
       let mediaUrl: string | undefined;
       let duration: number | undefined;
       
-      if (content.includes('<attached: ')) {
-        const attachmentMatch = content.match(/<attached: ([^>]+)>/);
+      if (content.includes('‎<attached: ')) {
+        const attachmentMatch = content.match(/‎<attached: ([^>]+)>/);
         if (attachmentMatch) {
           const attachmentName = attachmentMatch[1];
           
