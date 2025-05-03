@@ -30,38 +30,39 @@ import { formatDistanceToNow } from "date-fns";
 interface MediaFile {
   id: string;
   key: string;
+  chatExportId: number;
+  messageId?: number;
   originalName: string;
   contentType: string;
   size: number;
   uploadedAt: string;
-  expiresAt?: string;
   url?: string;
   type: 'voice' | 'image' | 'attachment' | 'pdf';
 }
 
 interface MediaListProps {
-  sessionId?: number; // Just a reference ID, not storing actual chat data anymore
+  chatId?: number;
   onDeleteMedia?: () => void;
 }
 
-export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) {
+export default function MediaList({ chatId, onDeleteMedia }: MediaListProps) {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
 
-  // Fetch media files for the session
+  // Fetch media files for the chat
   const fetchMediaFiles = async () => {
-    if (!sessionId) return;
+    if (!chatId) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      const response = await apiRequest(
-        "GET",
-        `/api/media/session/${sessionId}`
-      );
+      const response = await apiRequest({
+        url: `/api/media/${chatId}`,
+        method: "GET",
+      });
       
       if (response && typeof response === 'object' && 'media' in response) {
         setMediaFiles(response.media as MediaFile[] || []);
@@ -82,10 +83,10 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
     try {
       setDeleting(prev => ({ ...prev, [mediaId]: true }));
       
-      await apiRequest(
-        "DELETE",
-        `/api/media/${mediaId}`
-      );
+      await apiRequest({
+        url: `/api/media/${mediaId}`,
+        method: "DELETE",
+      });
       
       // Remove the deleted file from the state
       setMediaFiles(prev => prev.filter(file => file.id !== mediaId));
@@ -138,12 +139,12 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
     }
   };
 
-  // Load media files on component mount or sessionId change
+  // Load media files on component mount or chatId change
   useEffect(() => {
-    if (sessionId) {
+    if (chatId) {
       fetchMediaFiles();
     }
-  }, [sessionId]);
+  }, [chatId]);
 
   // Show loading state
   if (loading && mediaFiles.length === 0) {
@@ -169,7 +170,7 @@ export default function MediaList({ sessionId, onDeleteMedia }: MediaListProps) 
   if (mediaFiles.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">
-        No media files found for this session.
+        No media files found for this chat.
       </div>
     );
   }

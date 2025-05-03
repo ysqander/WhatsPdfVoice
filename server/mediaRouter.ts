@@ -8,13 +8,7 @@ const router = Router();
  * Media proxy endpoint
  * This route gets a media file key from storage and redirects to a freshly
  * generated R2 presigned URL. This approach allows us to have links that
- * remain valid for much longer than the 7-day AWS SDK limit.
- * 
- * The database stores only the minimal information needed for this proxy:
- * - A UUID for the media (used in PDFs)
- * - The R2 object key
- * - Technical metadata (size, content type)
- * - Expiration date (when to auto-delete the media)
+ * remain valid for longer than the 7-day AWS SDK limit.
  */
 router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
   try {
@@ -29,17 +23,14 @@ router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Media file not found' });
     }
     
-    // Check if the media has expired
-    if (mediaFile.expiresAt && new Date() > new Date(mediaFile.expiresAt)) {
-      console.error(`Media file has expired: ${mediaId}`);
-      return res.status(410).json({ error: 'Media file has expired' });
-    }
+    console.log(`Found media file: ${JSON.stringify(mediaFile, null, 2)}`);
     
-    // Generate a fresh signed URL (1 hour expiration for the temporary URL)
+    // Generate a fresh signed URL (1 hour expiration)
     const signedUrl = await getSignedR2Url(mediaFile.key, 60 * 60);
-    console.log(`Generated fresh signed URL for media ID: ${mediaId}`);
+    console.log(`Generated signed URL: ${signedUrl}`);
     
     // Redirect to the actual R2 URL
+    console.log(`Redirecting to R2 URL`);
     return res.redirect(signedUrl);
   } catch (error) {
     console.error('Failed to proxy media request:', error);

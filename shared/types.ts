@@ -10,14 +10,13 @@ export interface ProcessingOptions {
 
 export interface Message {
   id?: number;
-  timestamp: string | Date;
+  timestamp: string;
   sender: string;
   content: string;
-  type: string;
-  mediaUrl?: string | null;
-  duration?: number | null;
+  type: 'text' | 'voice' | 'image' | 'attachment';
+  mediaUrl?: string;
+  duration?: number;
   chatExportId?: number;
-  isDeleted?: boolean | null;
 }
 
 export interface ChatExport {
@@ -28,7 +27,7 @@ export interface ChatExport {
   messages: Message[];
   generatedAt?: string;
   pdfUrl?: string;
-  processingOptions: ProcessingOptions | string;
+  processingOptions: ProcessingOptions;
 }
 
 export interface ProcessProgressEvent {

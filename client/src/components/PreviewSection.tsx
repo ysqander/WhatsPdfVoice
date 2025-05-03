@@ -122,7 +122,7 @@ export default function PreviewSection({
           <TabsContent value="media" className="flex-1 overflow-auto p-4 bg-gray-100 m-0">
             {isFileProcessed && chatData?.id ? (
               <MediaList 
-                sessionId={chatData.id} 
+                chatId={chatData.id} 
                 onDeleteMedia={handleMediaDeleted}
                 key={`media-list-${mediaUpdated}`}
               />

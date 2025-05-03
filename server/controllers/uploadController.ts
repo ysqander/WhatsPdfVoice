@@ -459,9 +459,6 @@ export const uploadController = {
 
           // Download the PDF from the URL
           try {
-            if (!pdfFile.url) {
-              throw new Error("PDF URL is missing");
-            }
             const pdfResponse = await fetch(pdfFile.url);
             if (!pdfResponse.ok) {
               throw new Error(`Failed to download PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
@@ -507,9 +504,6 @@ export const uploadController = {
 
           try {
             // Download file from R2
-            if (!file.url) {
-              throw new Error("Media URL is missing");
-            }
             const response = await fetch(file.url);
             if (!response.ok) {
               throw new Error(`Failed to download media: ${response.status} ${response.statusText}`);
