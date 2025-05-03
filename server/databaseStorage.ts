@@ -103,8 +103,10 @@ export class DatabaseStorage implements IStorage {
     
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
-      processingOptions: JSON.parse(chatExport.processingOptions) as ProcessingOptions
+      // Ensure processingOptions is an object
+      processingOptions: typeof chatExport.processingOptions === 'string'
+        ? JSON.parse(chatExport.processingOptions)
+        : chatExport.processingOptions
     };
   }
 
@@ -144,7 +146,7 @@ export class DatabaseStorage implements IStorage {
     
     return {
       progress: progress.progress,
-      step: progress.step
+      step: progress.step ?? undefined
     };
   }
 

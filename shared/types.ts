@@ -13,7 +13,7 @@ export interface Message {
   timestamp: string | Date;
   sender: string;
   content: string;
-  type: 'text' | 'voice' | 'image' | 'attachment';
+  type: string;
   mediaUrl?: string | null;
   duration?: number | null;
   chatExportId?: number;
@@ -28,7 +28,7 @@ export interface ChatExport {
   messages: Message[];
   generatedAt?: string;
   pdfUrl?: string;
-  processingOptions: ProcessingOptions;
+  processingOptions: ProcessingOptions | string;
 }
 
 export interface ProcessProgressEvent {

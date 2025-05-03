@@ -459,6 +459,9 @@ export const uploadController = {
 
           // Download the PDF from the URL
           try {
+            if (!pdfFile.url) {
+              throw new Error("PDF URL is missing");
+            }
             const pdfResponse = await fetch(pdfFile.url);
             if (!pdfResponse.ok) {
               throw new Error(`Failed to download PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
