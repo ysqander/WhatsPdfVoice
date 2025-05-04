@@ -933,6 +933,9 @@ function drawWrappedText(
 ): { lines: string[]; finalY: number } {
     const lines: string[] = [];
     let currentY = startY;
+    
+    // Sanitize text before processing
+    text = sanitizeTextForPdf(text);
 
     const paragraphs = text.split("\n");
 
@@ -1067,6 +1070,34 @@ function estimateMessageHeight(
 /**
  * Estimates the number of lines required for text wrapping.
  */
+// Sanitize text for PDF compatibility with WinAnsi encoding
+function sanitizeTextForPdf(text: string): string {
+    // Replace common emojis with text equivalents
+    const emojiMap: { [key: string]: string } = {
+        '👍': '[thumbs up]',
+        '👎': '[thumbs down]',
+        '❤️': '[heart]',
+        '😊': '[smile]',
+        '😂': '[laugh]',
+        '🙏': '[pray]',
+        '👋': '[wave]',
+        '🎉': '[party]',
+        '✅': '[check]',
+        '❌': '[x]',
+    };
+
+    // First replace known emojis
+    let sanitized = text;
+    for (const [emoji, replacement] of Object.entries(emojiMap)) {
+        sanitized = sanitized.replace(new RegExp(emoji, 'g'), replacement);
+    }
+
+    // Then replace any remaining non-WinAnsi characters with '?'
+    sanitized = sanitized.replace(/[^\x00-\xFF]/g, '?');
+
+    return sanitized;
+}
+
 function estimateLines(
     text: string,
     font: PDFFont,
@@ -1074,6 +1105,9 @@ function estimateLines(
     maxWidth: number,
 ): number {
     if (!text) return 1; // Assume at least one line even if empty content
+    
+    // Sanitize text before processing
+    text = sanitizeTextForPdf(text);
 
     let totalLines = 0;
     const paragraphs = text.split("\n");
