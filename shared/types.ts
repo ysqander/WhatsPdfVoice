@@ -42,8 +42,13 @@ export enum ProcessingStep {
   EXTRACT_ZIP = 0,
   PARSE_MESSAGES = 1,
   CONVERT_VOICE = 2,
-  GENERATE_PDF = 3
+  GENERATE_PDF = 3,
+  PAYMENT_REQUIRED = 4
 }
+
+// Constants for free tier limits
+export const FREE_TIER_MESSAGE_LIMIT = 150;
+export const FREE_TIER_MEDIA_SIZE_LIMIT = 20 * 1024 * 1024; // 20MB in bytes
 
 // MediaFile interface (copy from schema.ts for direct import)
 export interface MediaFile {

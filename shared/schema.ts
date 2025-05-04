@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -20,9 +20,35 @@ export const insertMediaProxyFileSchema = createInsertSchema(mediaProxyFiles).om
   lastAccessed: true,
 });
 
+// Payment bundles table - tracks the status of chat export bundles that require payment
+export const paymentBundles = pgTable("payment_bundles", {
+  id: uuid("id").primaryKey().defaultRandom(), // The bundle ID used in payment metadata
+  chatExportId: integer("chat_export_id"), // Associated chat export ID (if any)
+  r2TempKey: text("r2_temp_key"), // Temporary R2 storage location
+  r2FinalKey: text("r2_final_key"), // Final R2 storage location after payment
+  messageCount: integer("message_count"), // Number of messages in the chat
+  mediaSizeBytes: integer("media_size_bytes"), // Total size of media files in bytes
+  isPaid: boolean("is_paid").default(false), // Whether this bundle has been paid for
+  stripeSessionId: text("stripe_session_id"), // Stripe checkout session ID
+  createdAt: timestamp("created_at").defaultNow().notNull(), // When the bundle was created
+  paidAt: timestamp("paid_at"), // When the bundle was paid for
+  expiresAt: timestamp("expires_at"), // When the temporary bundle expires (24h after creation)
+  emailAddress: text("email_address"), // Customer email for sending download link
+});
+
+// Create insert schemas for payment bundles
+export const insertPaymentBundleSchema = createInsertSchema(paymentBundles).omit({
+  id: true,
+  createdAt: true,
+  isPaid: true,
+  paidAt: true,
+});
+
 // Types
 export type MediaProxyFile = typeof mediaProxyFiles.$inferSelect;
 export type InsertMediaProxyFile = z.infer<typeof insertMediaProxyFileSchema>;
+export type PaymentBundle = typeof paymentBundles.$inferSelect;
+export type InsertPaymentBundle = z.infer<typeof insertPaymentBundleSchema>;
 
 // Re-export types needed for compatibility with existing code
 export type ChatExport = {

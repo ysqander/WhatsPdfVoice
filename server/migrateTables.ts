@@ -18,8 +18,28 @@ async function migrateDatabase() {
         "expiry_date" TIMESTAMP
       );
     `);
-
+    
     console.log("Created media_proxy_files table");
+    
+    // Create payment bundles table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "payment_bundles" (
+        "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        "chat_export_id" INTEGER,
+        "r2_temp_key" TEXT,
+        "r2_final_key" TEXT,
+        "message_count" INTEGER,
+        "media_size_bytes" INTEGER,
+        "is_paid" BOOLEAN DEFAULT FALSE,
+        "stripe_session_id" TEXT,
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "paid_at" TIMESTAMP,
+        "expires_at" TIMESTAMP,
+        "email_address" TEXT
+      );
+    `);
+    
+    console.log("Created payment_bundles table");
     console.log("Migration completed successfully!");
   } catch (error) {
     console.error("Error during migration:", error);
