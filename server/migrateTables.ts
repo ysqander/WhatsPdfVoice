@@ -40,6 +40,34 @@ async function migrateDatabase() {
       );
     `);
     
+    // Check if bundle_id column exists in payment_bundles table, if not add it
+    const result = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'payment_bundles' AND column_name = 'bundle_id';
+    `);
+    
+    if (result.rowCount === 0) {
+      console.log("Adding missing bundle_id column to payment_bundles table");
+      await db.execute(sql`
+        ALTER TABLE "payment_bundles" 
+        ADD COLUMN "bundle_id" TEXT UNIQUE;
+      `);
+      
+      // Update existing rows with a UUID
+      await db.execute(sql`
+        UPDATE "payment_bundles" 
+        SET "bundle_id" = gen_random_uuid()::text 
+        WHERE "bundle_id" IS NULL;
+      `);
+      
+      // Make the column NOT NULL after populating it
+      await db.execute(sql`
+        ALTER TABLE "payment_bundles" 
+        ALTER COLUMN "bundle_id" SET NOT NULL;
+      `);
+    }
+    
     console.log("Created payment_bundles table");
     console.log("Migration completed successfully!");
   } catch (error) {
