@@ -223,22 +223,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe Webhook endpoint - use a middleware that preserves the raw body
   app.post('/webhook/payment', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
-      const signature = req.headers['stripe-signature'] as string;
+      // Log important info for debugging
+      console.log('Webhook received. Headers:', {
+        'content-type': req.headers['content-type'],
+        'stripe-signature': req.headers['stripe-signature'] ? 'Present' : 'Missing'
+      });
       
-      // The body is already a Buffer in raw middleware, so we don't need to toString() it yet
+      if (!req.headers['stripe-signature']) {
+        return res.status(400).send('Stripe signature header is missing');
+      }
+      
+      const signature = req.headers['stripe-signature'] as string;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      
+      if (!webhookSecret) {
+        console.error('STRIPE_WEBHOOK_SECRET environment variable is not set');
+        return res.status(500).send('Webhook secret is not configured');
+      }
+      
+      // Verify the event
       let event;
       try {
+        // Make sure req.body is a Buffer - express.raw middleware should handle this
+        const payload = req.body;
+        
+        if (!payload) {
+          throw new Error('No request body received');
+        }
+        
+        console.log('Request body type:', typeof payload, payload instanceof Buffer);
+        
         event = stripe.webhooks.constructEvent(
-          req.body, 
+          payload, 
           signature, 
-          process.env.STRIPE_WEBHOOK_SECRET as string
+          webhookSecret
         );
       } catch (err) {
-        console.error('⚠️ Webhook signature verification failed.', err);
+        console.error('⚠️ Webhook signature verification failed:', err);
         return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}`);
       }
       
-      console.log(`Webhook received and verified: ${event.type}`);
+      console.log(`Webhook verified successfully: ${event.type}`);
       
       // Handle the webhook event type
       if (event.type === 'checkout.session.completed') {
@@ -263,14 +288,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`Bundle marked as paid, valid for 30 days`);
           
-          res.json({ received: true });
+          return res.json({ received: true });
         } else {
           console.error('Bundle not found or payment failed');
-          res.status(400).json({ error: 'Failed to process payment' });
+          return res.status(400).json({ error: 'Failed to process payment' });
         }
       } else {
         // Ignore other event types
-        res.json({ received: true });
+        return res.json({ received: true });
       }
     } catch (error) {
       console.error('Error handling webhook:', error);
