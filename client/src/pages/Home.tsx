@@ -322,6 +322,9 @@ export default function Home() {
                   localStorage.removeItem('whats_pdf_checkout_started');
                   localStorage.removeItem('whats_pdf_bundle_id');
                   
+                  // Clear URL parameters
+                  window.history.replaceState({}, document.title, window.location.pathname);
+                  
                   toast({
                     title: "Download Ready",
                     description: "Your payment was successful and your download is ready.",
