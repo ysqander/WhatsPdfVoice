@@ -41,8 +41,7 @@ export default function PaymentRequired({
   const handlePaymentSuccess = () => {
     toast({
       title: "Payment Successful",
-      description: "Your payment has been processed successfully.",
-      variant: "success"
+      description: "Your payment has been processed successfully."
     });
     
     if (onPaymentComplete) {

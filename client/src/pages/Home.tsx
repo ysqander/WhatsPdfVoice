@@ -47,9 +47,9 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const success = params.get('success');
     const cancelled = params.get('cancelled');
-    const bundleUrl = params.get('bundleUrl');
+    const bundleId = params.get('bundleId');
     
-    if (success === 'true' && bundleUrl) {
+    if (success === 'true' && bundleId) {
       toast({
         title: "Payment Successful!",
         description: "Thank you for your purchase. Your download is ready.",
@@ -58,10 +58,42 @@ export default function Home() {
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
       
-      // Set the PDF URL and mark as processed
-      setPdfUrl(decodeURIComponent(bundleUrl));
-      setIsFileProcessed(true);
-      setRequiresPayment(false);
+      // Fetch payment status and download URL
+      const fetchPaymentDetails = async () => {
+        try {
+          const response = await fetch(`/api/payment/${bundleId}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch payment details');
+          }
+          
+          const data = await response.json();
+          
+          if (data.isPaid) {
+            // Set the PDF URL and mark as processed
+            if (data.pdfUrl) {
+              setPdfUrl(data.pdfUrl);
+              setIsFileProcessed(true);
+              setRequiresPayment(false);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Download Error",
+                description: "Payment was successful, but download is not yet available. Please try again shortly.",
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching payment details:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not retrieve payment details. Please try again.",
+          });
+        }
+      };
+      
+      fetchPaymentDetails();
     }
     
     if (cancelled === 'true') {
@@ -74,7 +106,7 @@ export default function Home() {
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [toast]);
 
   const resetState = () => {
     setFile(null);
@@ -144,6 +176,10 @@ export default function Home() {
                 mediaSizeBytes={mediaSizeBytes}
                 bundleId={bundleId || ''}
                 checkoutUrl={checkoutUrl}
+                onPaymentComplete={() => {
+                  setRequiresPayment(false);
+                  setIsFileProcessed(true);
+                }}
               />
             )}
 
