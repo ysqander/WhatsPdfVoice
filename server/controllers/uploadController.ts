@@ -23,6 +23,95 @@ import { isPaymentRequired, calculateMediaSize, handlePaymentCheck } from "../li
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
 
+/**
+ * Helper to find a media file path in various locations
+ * @param filename Media filename
+ * @param extractDir Extract directory
+ * @returns Path to the media file if found
+ */
+function findMediaPath(filename: string, extractDir: string): string | undefined {
+  // First, try direct path in media directory
+  const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media');
+  const directPath = path.join(mediaDir, filename);
+  if (fs.existsSync(directPath)) {
+    return directPath;
+  }
+  
+  // Next, try in extract directory if provided
+  if (extractDir) {
+    // Function to search recursively in directory
+    const searchRecursive = (dir: string): string | undefined => {
+      try {
+        const files = fs.readdirSync(dir);
+        
+        for (const file of files) {
+          const filePath = path.join(dir, file);
+          
+          try {
+            const stats = fs.statSync(filePath);
+            
+            if (stats.isDirectory()) {
+              const result = searchRecursive(filePath);
+              if (result) return result;
+            } else if (
+              file === filename || 
+              file.endsWith(filename) ||
+              // Additionally check for files with similar names but different extensions
+              file.includes(path.basename(filename, path.extname(filename)))
+            ) {
+              return filePath;
+            }
+          } catch (err) {
+            // Continue with next file
+          }
+        }
+      } catch (err) {
+        // Continue
+      }
+      return undefined;
+    };
+    
+    return searchRecursive(extractDir);
+  }
+  
+  return undefined;
+}
+
+/**
+ * Helper to upload a media file from a path and update the message
+ */
+async function uploadMediaFile(message: any, filePath: string, type: 'voice' | 'image' | 'attachment', chatExportId: number) {
+  // Determine content type
+  let contentType = 'application/octet-stream';
+  if (type === 'voice') {
+    contentType = 'audio/ogg';
+  } else if (type === 'image') {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+  } else if (type === 'attachment' && filePath.toLowerCase().endsWith('.pdf')) {
+    contentType = 'application/pdf';
+  }
+  
+  // Upload to R2
+  const mediaFile = await storage.uploadMediaToR2(
+    filePath,
+    contentType,
+    chatExportId,
+    message.id,
+    type
+  );
+  
+  // Update message with R2 URL
+  if (message.id) {
+    await storage.updateMessageMediaUrl(message.id, mediaFile.key, mediaFile.url!);
+  }
+  
+  return mediaFile;
+}
+
 // Calculate file hash
 const calculateFileHash = (filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -112,6 +201,9 @@ export const uploadController = {
           storage.saveProcessingProgress(clientId, 30, ProcessingStep.PARSE_MESSAGES);
           clients.get(clientId)?.write(`data: ${JSON.stringify({ progress: 30, step: ProcessingStep.PARSE_MESSAGES })}\n\n`);
           console.log(`Starting parse for file: ${req.file!.path}`);
+          // Extract the ZIP file to a temporary directory
+          const extractDir = path.join(path.dirname(req.file!.path), path.basename(req.file!.path, '.zip'));
+          
           const chatData = await parse(req.file!.path, options).catch(error => {
             console.error('Error parsing file:', error);
             throw new Error(`Failed to parse file: ${error.message}`);
@@ -161,13 +253,8 @@ export const uploadController = {
             const savedChatExport = await storage.saveChatExport(chatData);
             chatData.id = savedChatExport.id;
             
-            // Generate PDF for payment
-            console.log('Generating PDF for payment bundle');
-            const pdfResult = await generatePdf(chatData);
-            console.log('PDF generation completed for payment:', pdfResult);
-            
             try {
-              // Create a payment bundle
+              // Create a payment bundle first
               const bundle = await paymentService.createPaymentBundle(
                 savedChatExport.id!,
                 chatData.messages.length,
@@ -177,6 +264,81 @@ export const uploadController = {
               console.log('Created payment bundle:', {
                 bundleId: bundle.bundleId
               });
+              
+              // Process media files first (upload to R2)
+              console.log('R2 connection successful');
+              console.log('R2 connection successful, proceeding with media uploads');
+              
+              // Find all media messages that need to be uploaded
+              const mediaMessages = chatData.messages.filter(
+                msg => msg.type === 'voice' || msg.type === 'image' || msg.type === 'attachment'
+              );
+              
+              console.log(`Found ${mediaMessages.length} media messages to upload to R2`);
+              
+              // Upload voice messages first
+              const voiceMessages = mediaMessages.filter(msg => msg.type === 'voice');
+              if (voiceMessages.length > 0) {
+                console.log(`Processing ${voiceMessages.length} voice messages`);
+                
+                for (const message of voiceMessages) {
+                  // Handle voice message upload
+                  if (message.mediaUrl) {
+                    const mediaFilename = path.basename(message.mediaUrl);
+                    const mediaPath = findMediaPath(mediaFilename, extractDir);
+                    
+                    if (mediaPath) {
+                      console.log(`Uploading voice message to R2: ${mediaPath}`);
+                      await uploadMediaFile(message, mediaPath, 'voice', savedChatExport.id!);
+                    }
+                  }
+                }
+              }
+              
+              // Upload image messages next
+              const imageMessages = mediaMessages.filter(msg => msg.type === 'image');
+              if (imageMessages.length > 0) {
+                console.log(`Processing ${imageMessages.length} image messages`);
+                
+                for (const message of imageMessages) {
+                  if (message.mediaUrl) {
+                    const mediaFilename = path.basename(message.mediaUrl);
+                    const mediaPath = findMediaPath(mediaFilename, extractDir);
+                    
+                    if (mediaPath) {
+                      console.log(`Uploading image to R2: ${mediaPath}`);
+                      await uploadMediaFile(message, mediaPath, 'image', savedChatExport.id!);
+                    }
+                  }
+                }
+              }
+              
+              // Upload attachment messages last
+              const attachmentMessages = mediaMessages.filter(msg => msg.type === 'attachment');
+              if (attachmentMessages.length > 0) {
+                console.log(`Processing ${attachmentMessages.length} attachment messages`);
+                
+                for (const message of attachmentMessages) {
+                  if (message.mediaUrl) {
+                    const mediaFilename = path.basename(message.mediaUrl);
+                    const mediaPath = findMediaPath(mediaFilename, extractDir);
+                    
+                    if (mediaPath) {
+                      console.log(`Uploading attachment to R2: ${mediaPath}`);
+                      await uploadMediaFile(message, mediaPath, 'attachment', savedChatExport.id!);
+                    }
+                  }
+                }
+              }
+              
+              // Update the chat data with fresh message records
+              const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
+              chatData.messages = updatedMessages;
+              
+              // Now generate the PDF after media uploads
+              console.log('Generating PDF for payment bundle after media uploads');
+              const pdfResult = await generatePdf(chatData);
+              console.log('PDF generation completed for payment:', pdfResult);
               
               // Update progress to payment required state
               storage.saveProcessingProgress(clientId, 40, ProcessingStep.PAYMENT_REQUIRED);
