@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getSignedR2Url } from "./lib/r2Storage";
-import { storage } from "./storage";
+import { mediaStorage } from "./dbStorage";
 
 const router = Router();
 
@@ -20,8 +19,8 @@ router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
     const { mediaId } = req.params;
     console.log(`Voice message proxy request received for ID: ${mediaId}`);
     
-    // Get the voice message file from storage
-    const mediaFile = await storage.getMediaFile(mediaId);
+    // Get the voice message file from the database storage
+    const mediaFile = await mediaStorage.getMediaFileByMediaId(mediaId);
     
     if (!mediaFile) {
       console.error(`Voice message not found with ID: ${mediaId}`);
@@ -32,7 +31,7 @@ router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
     }
     
     // Check if the media file has a key (it should, but might not due to privacy changes)
-    if (!mediaFile.key) {
+    if (!mediaFile.r2Key) {
       console.error(`Voice message found but has no key: ${mediaId}`);
       return res.status(404).json({ 
         error: 'Voice message data not available',
@@ -42,16 +41,24 @@ router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
     
     console.log(`Found voice message: ${mediaFile.id}, created: ${mediaFile.createdAt}`);
     
-    // Generate a fresh signed URL (short expiration for security)
-    const signedUrl = await getSignedR2Url(mediaFile.key, 60 * 15); // 15 minutes
-    
-    // Log with a truncated URL to avoid exposing full details in logs
-    const truncatedUrl = signedUrl.substring(0, 75) + '...';
-    console.log(`Generated signed URL: ${truncatedUrl}`);
-    
-    // Redirect to the actual R2 URL
-    console.log(`Redirecting to R2 URL for voice message ${mediaId}`);
-    return res.redirect(signedUrl);
+    // Generate a fresh signed URL using our database storage
+    try {
+      const signedUrl = await mediaStorage.getSignedUrl(mediaId);
+      
+      // Log with a truncated URL to avoid exposing full details in logs
+      const truncatedUrl = signedUrl.substring(0, 75) + '...';
+      console.log(`Generated signed URL: ${truncatedUrl}`);
+      
+      // Redirect to the actual R2 URL
+      console.log(`Redirecting to R2 URL for voice message ${mediaId}`);
+      return res.redirect(signedUrl);
+    } catch (err) {
+      console.error(`Error generating signed URL for ${mediaId}:`, err);
+      return res.status(500).json({
+        error: 'Failed to generate access URL',
+        message: 'Unable to generate a signed URL for this voice message.'
+      });
+    }
   } catch (error) {
     console.error('Failed to proxy voice message request:', error);
     return res.status(500).json({ 

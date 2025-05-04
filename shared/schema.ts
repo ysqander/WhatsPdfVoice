@@ -1,43 +1,24 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Chat export table to store the processed chats
-export const chatExports = pgTable("chat_exports", {
+// Media files table - stores only essential data for voice message access
+// This follows our privacy-focused approach and doesn't store any chat content
+export const mediaFiles = pgTable("media_files", {
   id: serial("id").primaryKey(),
-  originalFilename: text("original_filename").notNull(),
-  fileHash: text("file_hash").notNull(),
-  participants: text("participants").array(),
-  generatedAt: timestamp("generated_at").defaultNow().notNull(),
-  pdfUrl: text("pdf_url"),
-  processingOptions: text("processing_options").notNull(),
+  mediaId: text("media_id").notNull().unique(), // UUID used in proxy URLs
+  r2Key: text("r2_key").notNull(), // R2 storage key
+  mediaType: text("media_type").notNull().default("voice"), // Only storing voice files
+  createdAt: timestamp("created_at").defaultNow().notNull(), // Used for auto-deletion policy
+  expiresAt: timestamp("expires_at"), // Optional expiration date
 });
 
-// Messages table to store individual messages
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  chatExportId: integer("chat_export_id").notNull(),
-  timestamp: timestamp("timestamp").notNull(),
-  sender: text("sender").notNull(),
-  content: text("content").notNull(),
-  type: text("type").notNull().default("text"),
-  mediaUrl: text("media_url"),
-  duration: integer("duration"),
-  isDeleted: boolean("is_deleted").default(false)
-});
-
-// Create insert schemas
-export const insertChatExportSchema = createInsertSchema(chatExports).omit({
+// Create insert schema for media files
+export const insertMediaFileSchema = createInsertSchema(mediaFiles).omit({
   id: true,
-  generatedAt: true,
-});
-
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
+  createdAt: true,
 });
 
 // Types
-export type ChatExport = typeof chatExports.$inferSelect;
-export type InsertChatExport = z.infer<typeof insertChatExportSchema>;
-export type Message = typeof messages.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type MediaFile = typeof mediaFiles.$inferSelect;
+export type InsertMediaFile = z.infer<typeof insertMediaFileSchema>;
