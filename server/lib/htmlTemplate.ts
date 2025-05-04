@@ -228,14 +228,14 @@ export function generateHTML(chatData: ChatExport): string {
         const duration = message.duration || 0;
         const formattedDuration = formatDuration(duration);
 
-        // Use clickable link for voice messages instead of audio element
+        // Use button-like clickable link for voice messages
         html += `
-          <div class="message-content">
-            <a href="${message.mediaUrl}" class="voice-link" target="_blank">
-              <span class="voice-link-icon">&gt;</span>
+          <div class="message-content" style="margin: 10px 0;">
+            <a href="${message.mediaUrl}" class="voice-link" target="_blank" style="display: inline-flex; align-items: center; background-color: #f5f9ff; border: 1px solid #3498DB; border-radius: 8px; color: #3498DB; text-decoration: none; font-weight: 600; padding: 8px 12px; margin: 8px 0 12px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <span class="voice-link-icon" style="display: flex; justify-content: center; align-items: center; background-color: #3498DB; color: white; width: 22px; height: 22px; border-radius: 50%; margin-right: 10px; font-size: 14px;">&gt;</span>
               Play Voice Message
             </a>
-            <div class="duration-info">
+            <div class="duration-info" style="font-size: 12px; color: #888; margin-top: 4px; display: block; margin-left: 2px;">
               Duration: ${formattedDuration}
             </div>
           </div>

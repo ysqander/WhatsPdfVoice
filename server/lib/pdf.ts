@@ -214,6 +214,9 @@ async function generatePdfWithPdfLib(
         if (message.mediaUrl) {
           const playText = "> Play Voice Message";
           
+          // Add extra vertical spacing before voice messages
+          y -= 10;
+          
           // Create button-like appearance with a box around the text
           // Draw a colored background box
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
@@ -330,6 +333,12 @@ async function generatePdfWithPdfLib(
               font: timesRomanFont,
               color: rgb(0.5, 0.5, 0.5),
             });
+            
+            // Add extra spacing after voice messages with duration
+            y = buttonY - buttonHeight - 30;
+          } else {
+            // Standard spacing for voice messages without duration
+            y = buttonY - buttonHeight - 15;
           }
         } else {
           // Fallback for voice messages without a media URL
@@ -340,9 +349,10 @@ async function generatePdfWithPdfLib(
             font: timesRomanBoldFont,
             color: rgb(0.2, 0.6, 0.86), // #3498DB
           });
+          
+          // Standard spacing
+          y -= 20;
         }
-
-        y -= 20;
       } else if (message.type === "image") {
         // Draw a placeholder for image
         currentPage.drawText("[Image Attachment]", {
