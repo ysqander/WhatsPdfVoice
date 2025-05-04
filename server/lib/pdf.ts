@@ -222,7 +222,7 @@ async function generatePdfWithPdfLib(
           }
 
           // Add extra vertical spacing before voice messages
-          y -= 20;
+          y -= 10;
 
           // Create button-like appearance with a box around the text
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
@@ -333,7 +333,7 @@ async function generatePdfWithPdfLib(
           y = buttonY - buttonHeight - 5;
 
           // Add standard spacing below the button
-          y -= 20;
+          y -= 10;
         } else {
           // Fallback for voice messages without a media URL
           currentPage.drawText("[Voice Message]", {
