@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import { testR2Connection, getSignedR2Url } from "../lib/r2Storage";
 import { paymentService } from "../lib/paymentService";
 import { isPaymentRequired, calculateMediaSize, handlePaymentCheck } from "../lib/paymentHelper";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
@@ -538,14 +540,19 @@ export const uploadController = {
               // Upload PDF to R2
               const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', path.basename(pdfResult));
               
-              // Upload PDF to R2
+              // Add a special marker to identify this as the MAIN generated PDF (not an attachment)
+              // This will help us distinguish it from PDFs that might be attached to messages
               const pdfMediaFile = await storage.uploadMediaToR2(
                 pdfPath,
                 'application/pdf',
                 savedChatExport.id!,
                 undefined,
-                'pdf'
+                'pdf',
+                'MAIN_GENERATED_PDF',
+                'MAIN_PDF_' + savedChatExport.id
               );
+              
+              console.log('Uploaded main PDF file with special metadata markers:', pdfMediaFile.id);
               
               // Generate proxy URL for the PDF instead of direct R2 URL
               pdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`;

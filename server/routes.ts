@@ -342,14 +342,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       id: file.id, 
                       type: file.type, 
                       contentType: file.contentType,
-                      key: file.key
+                      key: file.key,
+                      originalName: file.originalName,
+                      fileHash: file.fileHash
                     });
                   });
                   
-                  const pdfFile = mediaFiles.find(file => file.type === 'pdf');
+                  // First try to find the PDF by our special marker
+                  let pdfFile = mediaFiles.find(file => 
+                    file.originalName === 'MAIN_GENERATED_PDF' || 
+                    (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+                  );
+                  
+                  // Fallback to type if our marker isn't found
+                  if (!pdfFile) {
+                    pdfFile = mediaFiles.find(file => file.type === 'pdf');
+                  }
                   
                   if (pdfFile) {
                     try {
+                      console.log(`Found main PDF file by marker: ${pdfFile.id}, originalName: ${pdfFile.originalName}, hash: ${pdfFile.fileHash}`);
                       // Generate a fresh URL and save it to the chat export
                       const pdfUrl = await storage.getMediaUrl(pdfFile.id);
                       await storage.savePdfUrl(bundle.chatExportId, pdfUrl);
@@ -360,8 +372,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   } else {
                     console.error(`No PDF file found in media files for chat export ${bundle.chatExportId}`);
                     
-                    // If we can't find a PDF file specifically marked as type 'pdf',
-                    // look for any media file with the PDF contentType as a fallback
+                    // If we can't find a PDF file by marker or type, look for any media file
+                    // with the PDF contentType as a final fallback
                     const pdfByContentType = mediaFiles.find(file => file.contentType === 'application/pdf');
                     
                     if (pdfByContentType) {
@@ -452,7 +464,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
               
-              let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              // First try to find the PDF by our special marker
+              let pdfFile = mediaFiles.find(file => 
+                file.originalName === 'MAIN_GENERATED_PDF' || 
+                (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+              );
+              
+              // Fallback to type if our marker isn't found
+              if (!pdfFile) {
+                pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              }
               
               // Try content type as fallback
               if (!pdfFile) {
@@ -546,8 +567,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
               
-              // First try to find PDF by type
-              let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              // First try to find the PDF by our special marker
+              let pdfFile = mediaFiles.find(file => 
+                file.originalName === 'MAIN_GENERATED_PDF' || 
+                (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+              );
+              
+              // Fallback to type if our marker isn't found
+              if (!pdfFile) {
+                pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              }
               
               // If not found, try by content type as fallback
               if (!pdfFile) {
@@ -648,7 +677,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+      // First try to find the PDF by our special marker
+      let pdfFile = mediaFiles.find(file => 
+        file.originalName === 'MAIN_GENERATED_PDF' || 
+        (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+      );
+      
+      // Fallback to type if our marker isn't found
+      if (!pdfFile) {
+        pdfFile = mediaFiles.find(file => file.type === 'pdf');
+      }
       
       // If no PDF file found by type, try content type as fallback
       if (!pdfFile) {

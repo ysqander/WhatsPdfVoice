@@ -49,7 +49,9 @@ export interface IStorage {
     contentType: string, 
     chatExportId: number, 
     messageId?: number, 
-    type?: 'voice' | 'image' | 'attachment' | 'pdf'
+    type?: 'voice' | 'image' | 'attachment' | 'pdf',
+    originalName?: string,
+    fileHash?: string
   ): Promise<MediaFile>;
   getMediaUrl(mediaId: string): Promise<string>;
   deleteMedia(mediaId: string): Promise<boolean>;
@@ -152,12 +154,14 @@ export class MemStorage implements IStorage {
     contentType: string, 
     chatExportId: number, 
     messageId?: number, 
-    type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment'
+    type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment',
+    customOriginalName?: string,
+    customFileHash?: string
   ): Promise<MediaFile> {
     try {
       // Get file stats
       const stats = fs.statSync(filePath);
-      const originalName = path.basename(filePath);
+      const originalName = customOriginalName || path.basename(filePath);
 
       // Upload to R2
       const directory = `chats/${chatExportId}/${type}`;
@@ -185,7 +189,8 @@ export class MemStorage implements IStorage {
         size: stats.size,
         uploadedAt: new Date().toISOString(),
         url,
-        type
+        type,
+        fileHash: customFileHash
       };
       
       // Store in memory
