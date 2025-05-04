@@ -79,8 +79,8 @@ const CheckoutForm = ({ bundleId, onSuccess, onCancel }: CheckoutFormProps) => {
         ) : (
           <div className="space-y-4">
             <div className="rounded-md bg-secondary p-4">
-              <h3 className="font-medium">Purchase Details</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="font-medium text-foreground">Purchase Details</h3>
+              <p className="text-sm text-foreground">
                 WhatsApp Chat Export Bundle - $9.00
               </p>
             </div>

@@ -347,7 +347,7 @@ export const uploadController = {
               clients.get(clientId)?.write(`data: ${JSON.stringify({ 
                 progress: 40, 
                 step: ProcessingStep.PAYMENT_REQUIRED,
-                messageCount: chatData.messages.length,
+                messageCount: chatData.messages.length > 0 ? chatData.messages.length : bundle.messageCount,
                 mediaSizeBytes: totalMediaSize,
                 requiresPayment: true,
                 bundleId: bundle.bundleId,
