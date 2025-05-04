@@ -1,41 +1,51 @@
 import { Router, Request, Response } from "express";
-import { getSignedR2Url } from "./lib/r2Storage";
-import { storage } from "./storage";
+import { mediaProxyStorage } from "./mediaProxyStorage";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 const router = Router();
 
 /**
  * Media proxy endpoint
- * This route gets a media file key from storage and redirects to a freshly
+ * This route gets a media file from the database and redirects to a freshly
  * generated R2 presigned URL. This approach allows us to have links that
  * remain valid for longer than the 7-day AWS SDK limit.
+ * 
+ * The database only tracks the minimal necessary information:
+ * - mediaId: UUID used in proxy URLs
+ * - r2Key: R2 object key for generating signed URLs
+ * - r2Url: Current R2 signed URL (refreshed as needed)
+ * - contentType: MIME type for proper content-type headers
+ * - createdAt: For purging old entries (90+ days)
+ * - lastAccessed: For tracking when the file was last accessed
  */
 router.get('/api/media/proxy/:mediaId', async (req: Request, res: Response) => {
   try {
     const { mediaId } = req.params;
     console.log(`Media proxy request received for ID: ${mediaId}`);
     
-    // Get the media file from storage
-    const mediaFile = await storage.getMediaFile(mediaId);
+    // Get the media file from database storage
+    // This automatically refreshes the URL if it's old
+    const mediaProxy = await mediaProxyStorage.getMediaProxy(mediaId);
     
-    if (!mediaFile) {
+    if (!mediaProxy) {
       console.error(`Media file not found with ID: ${mediaId}`);
       return res.status(404).json({ error: 'Media file not found' });
     }
     
-    console.log(`Found media file: ${JSON.stringify(mediaFile, null, 2)}`);
+    console.log(`Found media proxy record, R2 key: ${mediaProxy.r2Key}`);
     
-    // Generate a fresh signed URL (1 hour expiration)
-    const signedUrl = await getSignedR2Url(mediaFile.key, 60 * 60);
-    console.log(`Generated signed URL: ${signedUrl}`);
+    // Set appropriate content type based on the stored media information
+    res.setHeader('Content-Type', mediaProxy.contentType);
     
-    // Redirect to the actual R2 URL
+    // Redirect to the R2 URL
     console.log(`Redirecting to R2 URL`);
-    return res.redirect(signedUrl);
+    return res.redirect(mediaProxy.r2Url);
   } catch (error) {
     console.error('Failed to proxy media request:', error);
     return res.status(500).json({ 
-      error: 'Error generating signed URL',
+      error: 'Error accessing media file',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
