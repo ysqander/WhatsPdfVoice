@@ -58,6 +58,11 @@ const CheckoutForm = ({ bundleId, onSuccess, onCancel }: CheckoutFormProps) => {
   
   const handleProceedToCheckout = () => {
     if (checkoutUrl) {
+      console.log(`Proceeding to Stripe checkout: ${checkoutUrl}`);
+      // Track that we're starting a checkout process
+      localStorage.setItem('whats_pdf_checkout_started', 'true');
+      localStorage.setItem('whats_pdf_bundle_id', bundleId);
+      
       window.location.href = checkoutUrl;
     }
   };

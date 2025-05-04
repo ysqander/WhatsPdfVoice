@@ -42,14 +42,24 @@ export default function Home() {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<ProcessingStep | null>(null);
   
-  // Check if we have success or cancelled params in URL
+  // Check if we have success or cancelled params in URL or a pending checkout
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get('success');
     const cancelled = params.get('cancelled');
     const bundleId = params.get('bundleId');
     
+    // Check for stored checkout from localStorage
+    const pendingCheckout = localStorage.getItem('whats_pdf_checkout_started');
+    const storedBundleId = localStorage.getItem('whats_pdf_bundle_id');
+    
+    // If we return from successful payment
     if (success === 'true' && bundleId) {
+      // Clear stored checkout if it matches
+      if (pendingCheckout && storedBundleId === bundleId) {
+        localStorage.removeItem('whats_pdf_checkout_started');
+        localStorage.removeItem('whats_pdf_bundle_id');
+      }
       toast({
         title: "Payment Successful!",
         description: "Thank you for your purchase. Your download is ready.",
@@ -87,7 +97,46 @@ export default function Home() {
             } else {
               console.error('Payment success but no PDF URL available');
               
-              // Set a retry timer to check again in 3 seconds
+              // Try to repair the PDF URL first
+              console.log(`Attempting to repair PDF URL for bundle ${bundleId}`);
+              try {
+                const repairResponse = await fetch(`/api/payment/${bundleId}/repair`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (repairResponse.ok) {
+                  const repairData = await repairResponse.json();
+                  
+                  if (repairData.success && repairData.pdfUrl) {
+                    console.log(`PDF URL repaired successfully: ${repairData.pdfUrl}`);
+                    setPdfUrl(repairData.pdfUrl);
+                    setIsFileProcessed(true);
+                    setRequiresPayment(false);
+                    
+                    toast({
+                      title: "Download Ready",
+                      description: "Your payment was successful and your download is ready.",
+                    });
+                    
+                    return; // Skip the retry since we fixed it
+                  } else {
+                    console.warn('Repair response OK but no PDF URL returned:', repairData);
+                  }
+                } else {
+                  console.error(`Failed to repair PDF URL, status: ${repairResponse.status}`);
+                  if (repairResponse.status === 404) {
+                    const errorData = await repairResponse.json();
+                    console.error('Repair error details:', errorData);
+                  }
+                }
+              } catch (repairError) {
+                console.error('Error repairing PDF URL:', repairError);
+              }
+              
+              // Set a retry timer to check again in 3 seconds if repair failed
               setTimeout(() => {
                 console.log('Retrying payment details fetch');
                 fetchPaymentDetails();
@@ -121,6 +170,10 @@ export default function Home() {
     }
     
     if (cancelled === 'true') {
+      // Clear any pending checkout data
+      localStorage.removeItem('whats_pdf_checkout_started');
+      localStorage.removeItem('whats_pdf_bundle_id');
+      
       toast({
         variant: "destructive",
         title: "Payment Cancelled",
@@ -129,6 +182,82 @@ export default function Home() {
       
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    // Check if we have a pending checkout but no success/cancel URL params
+    // This happens if user refreshes page during checkout process
+    if (pendingCheckout && storedBundleId && !success && !cancelled) {
+      console.log(`Found pending checkout for bundle ${storedBundleId}`);
+      
+      // Try to fetch the payment status
+      (async () => {
+        try {
+          console.log(`Checking payment status for pending checkout bundle ${storedBundleId}`);
+          const response = await fetch(`/api/payment/${storedBundleId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch payment details, status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log(`Payment status for pending checkout bundle:`, data);
+          
+          if (data.isPaid) {
+            // Payment completed, show download
+            console.log(`Bundle ${storedBundleId} is already paid, showing download`);
+            setBundleId(data.bundleId);
+            setMessageCount(data.messageCount);
+            setMediaSizeBytes(data.mediaSizeBytes);
+            
+            if (data.pdfUrl) {
+              setPdfUrl(data.pdfUrl);
+              setIsFileProcessed(true);
+              setRequiresPayment(false);
+              
+              toast({
+                title: "Download Ready",
+                description: "Your payment was successful and your download is ready.",
+              });
+              
+              // Clear pending checkout
+              localStorage.removeItem('whats_pdf_checkout_started');
+              localStorage.removeItem('whats_pdf_bundle_id');
+            } else {
+              // Try the repair endpoint
+              const repairResponse = await fetch(`/api/payment/${storedBundleId}/repair`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (repairResponse.ok) {
+                const repairData = await repairResponse.json();
+                
+                if (repairData.success && repairData.pdfUrl) {
+                  setPdfUrl(repairData.pdfUrl);
+                  setIsFileProcessed(true);
+                  setRequiresPayment(false);
+                  
+                  // Clear pending checkout
+                  localStorage.removeItem('whats_pdf_checkout_started');
+                  localStorage.removeItem('whats_pdf_bundle_id');
+                  
+                  toast({
+                    title: "Download Ready",
+                    description: "Your payment was successful and your download is ready.",
+                  });
+                }
+              }
+            }
+          } else {
+            // Payment still pending or failed, keep localStorage values for now
+            console.log(`Bundle ${storedBundleId} pending payment`);
+          }
+        } catch (error) {
+          console.error(`Error checking pending checkout:`, error);
+        }
+      })();
     }
   }, [toast]);
 

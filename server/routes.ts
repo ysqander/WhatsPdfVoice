@@ -297,6 +297,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   // Try to find the PDF in media files and set it
                   const mediaFiles = await storage.getMediaFilesByChat(bundle.chatExportId);
+                  console.log(`Found ${mediaFiles.length} media files for chat export ${bundle.chatExportId}`);
+                  
+                  // Log all media files for debugging
+                  mediaFiles.forEach((file, index) => {
+                    console.log(`Media file ${index + 1}:`, { 
+                      id: file.id, 
+                      type: file.type, 
+                      contentType: file.contentType,
+                      key: file.key
+                    });
+                  });
+                  
                   const pdfFile = mediaFiles.find(file => file.type === 'pdf');
                   
                   if (pdfFile) {
@@ -310,6 +322,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                   } else {
                     console.error(`No PDF file found in media files for chat export ${bundle.chatExportId}`);
+                    
+                    // If we can't find a PDF file specifically marked as type 'pdf',
+                    // look for any media file with the PDF contentType as a fallback
+                    const pdfByContentType = mediaFiles.find(file => file.contentType === 'application/pdf');
+                    
+                    if (pdfByContentType) {
+                      try {
+                        console.log(`Found PDF by content type: ${pdfByContentType.id}`);
+                        const pdfUrl = await storage.getMediaUrl(pdfByContentType.id);
+                        await storage.savePdfUrl(bundle.chatExportId, pdfUrl);
+                        console.log(`Saved PDF URL from content type for bundle ${bundle.bundleId}: ${pdfUrl}`);
+                      } catch (fallbackError) {
+                        console.error(`Error with PDF fallback for bundle ${bundle.bundleId}:`, fallbackError);
+                      }
+                    }
                   }
                 }
               } else {
@@ -376,7 +403,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Try to find PDF in media files
               const mediaFiles = await storage.getMediaFilesByChat(bundle.chatExportId);
-              const pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              console.log(`Found ${mediaFiles.length} media files for chat export ${bundle.chatExportId} in redirect flow`);
+              
+              // Log media files for debugging
+              mediaFiles.forEach((file, index) => {
+                console.log(`Media file ${index + 1} in redirect:`, { 
+                  id: file.id, 
+                  type: file.type, 
+                  contentType: file.contentType,
+                  key: file.key
+                });
+              });
+              
+              let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              
+              // Try content type as fallback
+              if (!pdfFile) {
+                pdfFile = mediaFiles.find(file => file.contentType === 'application/pdf');
+                if (pdfFile) {
+                  console.log(`Found PDF by content type in redirect: ${pdfFile.id}`);
+                }
+              }
               
               if (pdfFile) {
                 try {
@@ -450,7 +497,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Determine if we have media files for this chat export
               const mediaFiles = await storage.getMediaFilesByChat(chatExportId);
-              const pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              console.log(`Found ${mediaFiles.length} media files for chat export ${chatExportId} in status check`);
+              
+              // Debug log media files
+              mediaFiles.forEach((file, index) => {
+                console.log(`Media file ${index + 1} in status check:`, { 
+                  id: file.id, 
+                  type: file.type, 
+                  contentType: file.contentType,
+                  key: file.key
+                });
+              });
+              
+              // First try to find PDF by type
+              let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+              
+              // If not found, try by content type as fallback
+              if (!pdfFile) {
+                pdfFile = mediaFiles.find(file => file.contentType === 'application/pdf');
+                if (pdfFile) {
+                  console.log(`Found PDF by content type in status check: ${pdfFile.id}`);
+                }
+              }
               
               if (pdfFile) {
                 // We found a PDF file in the media files, let's use its URL
@@ -483,6 +551,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting bundle:', error);
       res.status(500).json({ error: 'Error getting bundle' });
+    }
+  });
+  
+  // Repair bundle PDF URL - for recovering PDF URL when missing
+  app.post('/api/payment/:bundleId/repair', async (req, res) => {
+    try {
+      const { bundleId } = req.params;
+      
+      console.log(`Repairing PDF URL for bundle ${bundleId}`);
+      
+      // Get bundle from database
+      const bundle = await paymentService.getPaymentBundle(bundleId);
+      
+      if (!bundle) {
+        console.error(`Bundle ${bundleId} not found in database`);
+        return res.status(404).json({ error: 'Bundle not found' });
+      }
+      
+      // Verify bundle is paid and has a chat export ID
+      if (!bundle.paidAt) {
+        return res.status(400).json({ error: 'Bundle is not paid yet' });
+      }
+      
+      if (!bundle.chatExportId) {
+        return res.status(400).json({ error: 'Bundle has no chat export ID' });
+      }
+      
+      // Get chat export
+      const chatExport = await storage.getChatExport(bundle.chatExportId);
+      
+      if (!chatExport) {
+        return res.status(404).json({ error: 'Chat export not found' });
+      }
+      
+      // If chat export already has a PDF URL, return it
+      if (chatExport.pdfUrl) {
+        console.log(`Chat export ${bundle.chatExportId} already has PDF URL: ${chatExport.pdfUrl}`);
+        return res.json({ 
+          success: true, 
+          message: 'PDF URL already exists',
+          pdfUrl: chatExport.pdfUrl 
+        });
+      }
+      
+      // Try to find the PDF in media files
+      const mediaFiles = await storage.getMediaFilesByChat(bundle.chatExportId);
+      console.log(`Found ${mediaFiles.length} media files for chat export ${bundle.chatExportId}`);
+      
+      // Log all media files for debugging
+      mediaFiles.forEach((file, index) => {
+        console.log(`Media file ${index + 1}:`, { 
+          id: file.id, 
+          type: file.type, 
+          contentType: file.contentType,
+          key: file.key
+        });
+      });
+      
+      let pdfFile = mediaFiles.find(file => file.type === 'pdf');
+      
+      // If no PDF file found by type, try content type as fallback
+      if (!pdfFile) {
+        pdfFile = mediaFiles.find(file => file.contentType === 'application/pdf');
+        if (pdfFile) {
+          console.log(`Found PDF by content type: ${pdfFile.id}`);
+        }
+      }
+      
+      if (!pdfFile) {
+        return res.status(404).json({ 
+          error: 'No PDF file found', 
+          mediaFiles: mediaFiles.length,
+          mediaFileTypes: mediaFiles.map(file => file.type || 'unknown')
+        });
+      }
+      
+      console.log(`Using PDF file: ${pdfFile.id}, type: ${pdfFile.type}, contentType: ${pdfFile.contentType}`);
+      
+      // Get a fresh URL for the PDF
+      const pdfUrl = await storage.getMediaUrl(pdfFile.id);
+      
+      // Save the PDF URL to the chat export
+      await storage.savePdfUrl(bundle.chatExportId, pdfUrl);
+      
+      console.log(`Repaired PDF URL for bundle ${bundleId}: ${pdfUrl}`);
+      
+      return res.json({
+        success: true,
+        message: 'PDF URL repaired successfully',
+        pdfUrl
+      });
+    } catch (error) {
+      console.error('Error repairing PDF URL:', error);
+      return res.status(500).json({ 
+        error: 'Error repairing PDF URL',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
