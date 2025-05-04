@@ -337,10 +337,9 @@ export const uploadController = {
               const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
               chatData.messages = updatedMessages;
               
-              // Now generate the PDF after media uploads
-              console.log('Generating PDF for payment bundle after media uploads');
-              const pdfResult = await generatePdf(chatData);
-              console.log('PDF generation completed for payment:', pdfResult);
+              // We don't generate the PDF here anymore - it will be generated after payment
+              // to ensure we use the correct data and media URLs
+              console.log('Skipping PDF generation until after payment is completed');
               
               // Update progress to payment required state
               storage.saveProcessingProgress(clientId, 40, ProcessingStep.PAYMENT_REQUIRED);

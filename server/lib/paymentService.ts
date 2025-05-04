@@ -3,6 +3,10 @@ import { db } from '../db';
 import { paymentBundles, insertPaymentBundleSchema, PaymentBundle } from '../../shared/schema';
 import { eq, and, lt, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { storage } from '../storage';
+import { generatePdf } from './pdf';
+import fs from 'fs';
+import path from 'path';
 
 // Ensure Stripe API key is available
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -159,7 +163,7 @@ export class PaymentService {
         return undefined;
       }
       
-      console.log(`Marking bundle ${bundleId} as paid`);
+      console.log(`Processing payment for bundle ${bundleId}`);
       
       // Check if bundle exists before marking as paid
       const existingBundle = await this.getPaymentBundle(bundleId);
@@ -173,21 +177,122 @@ export class PaymentService {
       // If already paid, just return the bundle
       if (existingBundle.paidAt) {
         console.log(`Bundle ${bundleId} already marked as paid at ${existingBundle.paidAt}`);
+        // Ensure PDF URL is populated even if already paid (idempotency)
+        await this.ensurePdfGeneratedAndLinked(existingBundle);
         return existingBundle;
       }
       
-      // Mark the bundle as paid
+      // Mark the bundle as paid FIRST
       const updatedBundle = await this.markBundleAsPaid(bundleId);
-      
-      console.log(`Bundle ${bundleId} marked as paid successfully:`, {
-        paidAt: updatedBundle?.paidAt,
-        expiresAt: updatedBundle?.expiresAt
-      });
+      if (!updatedBundle) {
+        console.error(`Failed to mark bundle ${bundleId} as paid`);
+        return undefined; // Stop if marking as paid failed
+      }
+      console.log(`Bundle ${bundleId} marked as paid successfully.`);
+
+      // --- START: Generate and Link PDF AFTER marking as paid ---
+      await this.ensurePdfGeneratedAndLinked(updatedBundle);
+      // --- END: Generate and Link PDF AFTER marking as paid ---
       
       return updatedBundle;
     } catch (error) {
       console.error('Error handling checkout session completed:', error);
       return undefined;
+    }
+  }
+  
+  /**
+   * Ensures the final PDF for a paid bundle is generated, uploaded, and linked.
+   * This is idempotent - safe to call even if already done.
+   * @param bundle The payment bundle (must be marked as paid)
+   */
+  private async ensurePdfGeneratedAndLinked(bundle: PaymentBundle): Promise<void> {
+    if (!bundle.paidAt) {
+      console.warn(`ensurePdfGeneratedAndLinked called for unpaid bundle ${bundle.bundleId}. Skipping.`);
+      return;
+    }
+    if (!bundle.chatExportId) {
+      console.error(`Cannot generate PDF for bundle ${bundle.bundleId}: chatExportId is missing.`);
+      return;
+    }
+
+    try {
+      const chatExportId = bundle.chatExportId;
+      console.log(`Ensuring PDF exists and is linked for paid chat export ${chatExportId}`);
+
+      // Fetch chat export, check if PDF URL already exists and is valid
+      const chatExport = await storage.getChatExport(chatExportId);
+      if (!chatExport) {
+        console.error(`ChatExport ${chatExportId} not found during PDF generation for bundle ${bundle.bundleId}.`);
+        return;
+      }
+
+      // Check if a valid PDF URL pointing to our proxy already exists
+      if (chatExport.pdfUrl && chatExport.pdfUrl.includes('/api/media/proxy/')) {
+        // Attempt to resolve the proxy URL to check if the media file exists
+        try {
+          const mediaId = chatExport.pdfUrl.split('/').pop();
+          if (mediaId) {
+            const mediaFile = await storage.getMediaFile(mediaId);
+            // Check if it looks like the main generated PDF
+            if (mediaFile && (mediaFile.originalName === 'MAIN_GENERATED_PDF' || mediaFile.type === 'pdf')) {
+              console.log(`PDF URL ${chatExport.pdfUrl} already exists and seems valid for chat ${chatExportId}. Skipping regeneration.`);
+              return; // Assume it's correct and skip regeneration
+            } else {
+              console.log(`Existing PDF URL ${chatExport.pdfUrl} points to non-main PDF or missing media. Regenerating.`);
+            }
+          }
+        } catch (e) {
+          console.log(`Error verifying existing PDF URL ${chatExport.pdfUrl}. Regenerating. Error: ${e}`);
+        }
+      } else {
+        console.log(`No valid PDF URL found for chat ${chatExportId}. Generating PDF.`);
+      }
+
+      // Fetch full chat data including messages with updated media URLs
+      const messages = await storage.getMessagesByChatExportId(chatExportId);
+      const fullChatData = { ...chatExport, messages }; // Construct the full object needed by generatePdf
+
+      // Generate the final PDF
+      console.log(`Generating final PDF for chat ${chatExportId}...`);
+      const pdfResultPath = await generatePdf(fullChatData);
+      console.log(`Final PDF generated locally at: ${pdfResultPath}`);
+
+      // Determine the base URL
+      const appDomain = process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : null;
+      const appBaseUrl = appDomain ? `https://${appDomain}` : 'http://localhost:5000';
+
+      // Upload the final PDF to R2 with specific markers
+      console.log(`Uploading final PDF to R2 for chat ${chatExportId}...`);
+      const pdfMediaFile = await storage.uploadMediaToR2(
+        pdfResultPath,
+        'application/pdf',
+        chatExportId,
+        undefined, // Not linked to a specific message
+        'pdf', // Type is 'pdf' for the main transcript
+        'MAIN_GENERATED_PDF', // Use the special originalName marker
+        'MAIN_PDF_' + chatExportId // Use the special fileHash marker
+      );
+      console.log(`Final PDF uploaded to R2: key=${pdfMediaFile.key}, id=${pdfMediaFile.id}`);
+
+      // Generate the proxy URL for the PDF
+      const finalPdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`;
+      console.log(`Generated final PDF proxy URL: ${finalPdfUrl}`);
+
+      // Save the final PDF proxy URL to the chat export record
+      await storage.savePdfUrl(chatExportId, finalPdfUrl);
+      console.log(`Successfully saved final PDF URL for chat export ${chatExportId}`);
+
+      // Optional: Clean up the local PDF file
+      try {
+        fs.unlinkSync(pdfResultPath);
+        console.log(`Cleaned up local PDF: ${pdfResultPath}`);
+      } catch (err) {
+        console.error(`Error cleaning up local PDF ${pdfResultPath}:`, err);
+      }
+    } catch (error) {
+      console.error(`CRITICAL ERROR generating/linking PDF for paid bundle ${bundle.bundleId} (Chat ${bundle.chatExportId}):`, error);
+      // Payment is processed, but the PDF might be missing
     }
   }
 
