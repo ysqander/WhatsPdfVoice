@@ -16,12 +16,12 @@ export default function Home() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [processingSteps, setProcessingSteps] = useState<Array<{ done: boolean; text: string }>>([
+  const [processingSteps, setProcessingSteps] = useState<Array<{ done: boolean; text: string; name?: string }>>([
     { done: false, text: "Extracting ZIP contents..." },
     { done: false, text: "Parsing chat messages..." },
     { done: false, text: "Converting voice messages..." },
     { done: false, text: "Generating PDF document..." },
-    { done: false, text: "Payment required..." }
+    { done: false, text: "Payment required...", name: "Payment Required" }
   ]);
   const [isFileProcessed, setIsFileProcessed] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);

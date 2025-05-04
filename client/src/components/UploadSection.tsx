@@ -19,8 +19,8 @@ interface UploadSectionProps {
   setIsProcessing: (isProcessing: boolean) => void;
   processingProgress: number;
   setProcessingProgress: (progress: number) => void;
-  processingSteps: Array<{ done: boolean; text: string }>;
-  setProcessingSteps: (steps: Array<{ done: boolean; text: string }>) => void;
+  processingSteps: Array<{ done: boolean; text: string; name?: string }>;
+  setProcessingSteps: (steps: Array<{ done: boolean; text: string; name?: string }>) => void;
   isFileProcessed: boolean;
   setIsFileProcessed: (isProcessed: boolean) => void;
   setPdfUrl: (url: string | null) => void;
@@ -93,11 +93,11 @@ export default function UploadSection({
       
       // Update processing steps
       const updateStep = (index: number, done: boolean) => {
-        setProcessingSteps(prevSteps => 
-          prevSteps.map((step, i) => 
+        setProcessingSteps((prevSteps) => {
+          return prevSteps.map((step, i) => 
             i === index ? { ...step, done } : step
-          )
-        );
+          );
+        });
       };
       
       // Track processing with progress events
