@@ -438,16 +438,18 @@ export const uploadController = {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      // Create attachments directory for offline mode
+      // Create attachments directory for offline mode with subdirectories by type
       const attachmentsDir = path.join(tempDir, 'attachments');
+      const audioDir = path.join(attachmentsDir, 'audio');
+      const imageDir = path.join(attachmentsDir, 'image');
+      const pdfDir = path.join(attachmentsDir, 'pdf');
+      const otherDir = path.join(attachmentsDir, 'other');
+      
+      // Create all needed directories
       fs.mkdirSync(attachmentsDir, { recursive: true });
-
-      // Also keep media directories for backward compatibility
-      const voiceDir = path.join(tempDir, 'media', 'voice_messages');
-      const imageDir = path.join(tempDir, 'media', 'images');
-      const otherDir = path.join(tempDir, 'media', 'other');
-      fs.mkdirSync(voiceDir, { recursive: true });
+      fs.mkdirSync(audioDir, { recursive: true });
       fs.mkdirSync(imageDir, { recursive: true });
+      fs.mkdirSync(pdfDir, { recursive: true });
       fs.mkdirSync(otherDir, { recursive: true });
 
       // Get all media files for this chat export
@@ -495,51 +497,96 @@ export const uploadController = {
       );
 
       // Download media files from R2 if needed
-      // Keep track of file hashes for manifest
+      // Keep track of file hashes for manifest and file mappings
       const fileHashes: Record<string, string> = {};
+      const fileMap: Record<string, {originalName: string, mediaType: string, extension: string}> = {};
+      
       const downloadPromises = mediaFiles
         .filter(file => file.type !== 'pdf') // Exclude PDF as we've already handled it
         .map(async (file) => {
           // Determine target directory based on file type
           let targetDir = otherDir;
-          if (file.type === 'voice') targetDir = voiceDir;
-          if (file.type === 'image') targetDir = imageDir;
+          
+          if (file.type === 'voice' || file.type === 'audio') {
+            targetDir = audioDir;
+          } else if (file.type === 'image') {
+            targetDir = imageDir;
+          } else if (file.type === 'pdf') {
+            targetDir = pdfDir;
+          }
 
           // Create a filename from the key (removing directory path)
           const fileName = path.basename(file.key);
-          const filePath = path.join(targetDir, fileName);
           
-          // Also save to attachments directory with the media ID as filename
-          // This ensures a one-to-one correspondence with links in the PDF
-          const attachmentPath = path.join(attachmentsDir, file.id);
+          // Determine file extension
+          let extension = path.extname(fileName).toLowerCase();
+          if (!extension) {
+            // Assign default extension based on content type
+            if (file.contentType) {
+              if (file.contentType.includes('audio') || file.contentType.includes('ogg')) {
+                extension = '.ogg';
+              } else if (file.contentType.includes('pdf')) {
+                extension = '.pdf';
+              } else if (file.contentType.includes('image/jpeg') || file.contentType.includes('jpg')) {
+                extension = '.jpg';
+              } else if (file.contentType.includes('image/png')) {
+                extension = '.png';
+              } else if (file.contentType.includes('image/webp')) {
+                extension = '.webp';
+              } else {
+                extension = '.bin'; // Generic binary extension
+              }
+            } else {
+              extension = '.bin'; // Default if no content type
+            }
+          }
+          
+          // Create filename with media ID and proper extension
+          const mediaFileName = `${file.id}${extension}`;
+          
+          // Save path with proper directory structure
+          const filePath = path.join(targetDir, mediaFileName);
 
           try {
             // Download file from R2
+            if (!file.url) {
+              throw new Error("Missing URL for media file");
+            }
+            
             const response = await fetch(file.url);
             if (!response.ok) {
               throw new Error(`Failed to download media: ${response.status} ${response.statusText}`);
             }
+            
             const arrayBuffer = await response.arrayBuffer();
             const fileBuffer = Buffer.from(arrayBuffer);
             
-            // Write to both locations
+            // Write to proper location
             fs.writeFileSync(filePath, fileBuffer);
-            fs.writeFileSync(attachmentPath, fileBuffer);
             
             // Calculate file hash
             const hash = crypto.createHash('sha256');
             hash.update(fileBuffer);
             const fileHash = hash.digest('hex');
-            fileHashes[file.id] = fileHash;
             
-            console.log(`Downloaded media file from R2: ${fileName}, hash: ${fileHash.substring(0, 8)}...`);
+            // Store hash and file mapping information
+            fileHashes[file.id] = fileHash;
+            fileMap[file.id] = {
+              originalName: file.originalName || fileName,
+              mediaType: file.type || 'unknown',
+              extension: extension
+            };
+            
+            console.log(`Downloaded media file: ${mediaFileName}, hash: ${fileHash.substring(0, 8)}...`);
+            
             return { 
               success: true, 
               path: filePath, 
               type: file.type, 
               name: fileName,
               id: file.id,
-              hash: fileHash
+              hash: fileHash,
+              extension: extension
             };
           } catch (err) {
             console.error(`Error downloading media file ${fileName}:`, err);
@@ -548,7 +595,7 @@ export const uploadController = {
               path: null, 
               type: file.type, 
               name: fileName,
-              id: file.id 
+              id: file.id
             };
           }
         });
@@ -572,11 +619,40 @@ export const uploadController = {
           const mediaPath = path.join(mediaDir, mediaFileName);
 
           if (fs.existsSync(mediaPath)) {
+            // Determine target directory and extension based on file type
             let targetDir = otherDir;
-            if (message.type === 'voice') targetDir = voiceDir;
-            if (message.type === 'image') targetDir = imageDir;
+            let extension = path.extname(mediaFileName).toLowerCase();
+            
+            if (!extension) {
+              // Default extensions based on message type
+              if (message.type === 'voice' || message.type === 'audio') {
+                extension = '.ogg';
+              } else if (message.type === 'image') {
+                extension = '.jpg';
+              } else if (message.type === 'pdf') {
+                extension = '.pdf';
+              } else {
+                extension = '.bin'; // Generic binary extension
+              }
+            }
+            
+            // Set proper directory
+            if (message.type === 'voice' || message.type === 'audio') {
+              targetDir = audioDir;
+            } else if (message.type === 'image') {
+              targetDir = imageDir;
+            } else if (message.type === 'pdf') {
+              targetDir = pdfDir;
+            }
 
-            const targetPath = path.join(targetDir, mediaFileName);
+            // Generate a unique ID for this file if needed
+            const mediaId = message.id ? `local_media_${message.id}` : `local_media_${uuidv4()}`;
+            
+            // Create filenames with proper extensions
+            const targetFileName = `${mediaId}${extension}`;
+            const targetPath = path.join(targetDir, targetFileName);
+            
+            // Copy file to attachments directory
             fs.copyFileSync(mediaPath, targetPath);
             
             // Calculate hash for local file
@@ -585,14 +661,15 @@ export const uploadController = {
             hash.update(fileBuffer);
             const fileHash = hash.digest('hex');
             
-            // Use message id or generate a unique id
-            const mediaId = message.id ? `local_media_${message.id}` : `local_media_${uuidv4()}`;
+            // Store hash and mapping information
             fileHashes[mediaId] = fileHash;
+            fileMap[mediaId] = {
+              originalName: mediaFileName,
+              mediaType: message.type || 'unknown',
+              extension: extension
+            };
             
-            // Copy to attachments folder with this ID
-            fs.copyFileSync(mediaPath, path.join(attachmentsDir, mediaId));
-            
-            console.log(`Copied local media file: ${mediaFileName}, hash: ${fileHash.substring(0, 8)}...`);
+            console.log(`Copied local media file: ${mediaFileName} to ${targetFileName}, hash: ${fileHash.substring(0, 8)}...`);
           }
         };
 
@@ -618,18 +695,8 @@ export const uploadController = {
       // Pipe archive to response
       archive.pipe(res);
 
-      // Add PDF to archive
+      // Add PDF to archive root for easy access
       archive.file(pdfPath, { name: `Chat_Transcript.pdf` });
-
-      // Add media files to archive - both in attachments/ and media/ directories
-      // Attachments directory (flat structure with IDs as filenames)
-      const attachmentFiles = fs.readdirSync(attachmentsDir);
-      for (const file of attachmentFiles) {
-        const filePath = path.join(attachmentsDir, file);
-        if (fs.statSync(filePath).isFile()) {
-          archive.file(filePath, { name: path.join('attachments', file) });
-        }
-      }
       
       // Add traditional media directory structure (for backward compatibility)
       const walkDir = (dir: string, zipPath: string) => {
@@ -645,10 +712,16 @@ export const uploadController = {
         }
       };
 
-      walkDir(voiceDir, 'media/voice_messages');
-      walkDir(imageDir, 'media/images');
-      walkDir(otherDir, 'media/other');
+      // Walk and add directories by type
+      walkDir(audioDir, 'attachments/audio');
+      walkDir(imageDir, 'attachments/image');
+      walkDir(pdfDir, 'attachments/pdf');
+      walkDir(otherDir, 'attachments/other');
 
+      // Copy PDF to the attachments/pdf directory with a proper name
+      const pdfTargetPath = path.join(pdfDir, 'Chat_Transcript.pdf');
+      fs.copyFileSync(pdfPath, pdfTargetPath);
+      
       // Create an enhanced manifest with file hashes for legal compliance (Rule 902(14))
       const manifest = {
         caseReference: `WA-${format(new Date(), "yyyyMMdd-HHmm")}`,
@@ -664,7 +737,9 @@ export const uploadController = {
         },
         originalFilename: chatExport.originalFilename,
         // Add file hashes for legal certification
-        fileHashes: fileHashes
+        fileHashes: fileHashes,
+        // Add file mappings for original file names to media IDs
+        fileMap: fileMap
       };
 
       // Add manifest.json to the archive
@@ -677,18 +752,27 @@ export const uploadController = {
 This ZIP archive contains:
 
 1. Chat_Transcript.pdf - The formatted chat transcript with clickable links
-2. attachments/ - Directory containing all media files with IDs matching links in the PDF
-3. media/ - Organized directory containing media files by type (for convenience)
-   - voice_messages/ - Voice notes from the conversation
-   - images/ - Images shared in the chat
-   - other/ - Other attachments from the conversation
-4. manifest.json - Metadata and SHA-256 hashes for Rule 902(14) compliance
+2. attachments/ - Directory containing all media files organized by type
+   - audio/ - Voice notes and audio messages
+   - image/ - Photos and images
+   - pdf/ - PDF documents
+   - other/ - Other file types
+3. manifest.json - Metadata, SHA-256 hashes, and file mappings for Rule 902(14) compliance
 
-For court submissions:
-- The PDF transcript contains all messages in a printable format with live links
-- The attachments folder contains all media files with IDs matching the links in the PDF
-- Each file has a SHA-256 hash in the manifest.json for legal certification
-- This package satisfies Federal Rule of Evidence 902(14) requirements without outside experts
+INTEGRITY VERIFICATION:
+- Each file in the package has its SHA-256 hash recorded in manifest.json
+- File IDs in the transcript match the filenames in the attachments directory
+- Each file has its proper extension for easy opening
+- The manifest contains original filename to media ID mappings
+
+FOR COURT SUBMISSIONS:
+- This package satisfies Federal Rule of Evidence 902(14) requirements
+- SHA-256 hashes provide self-authentication without requiring expert testimony
+- To verify a file's integrity, calculate its SHA-256 hash and compare to the manifest
+
+HASH VERIFICATION:
+- Windows PowerShell: Get-FileHash -Algorithm SHA256 path\\to\\file
+- Mac/Linux Terminal: shasum -a 256 path/to/file
 
 Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
 `;
