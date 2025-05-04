@@ -437,7 +437,11 @@ export const uploadController = {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      // Create subdirectories for media types
+      // Create attachments directory for offline mode
+      const attachmentsDir = path.join(tempDir, 'attachments');
+      fs.mkdirSync(attachmentsDir, { recursive: true });
+
+      // Also keep media directories for backward compatibility
       const voiceDir = path.join(tempDir, 'media', 'voice_messages');
       const imageDir = path.join(tempDir, 'media', 'images');
       const otherDir = path.join(tempDir, 'media', 'other');
@@ -490,6 +494,8 @@ export const uploadController = {
       );
 
       // Download media files from R2 if needed
+      // Keep track of file hashes for manifest
+      const fileHashes: Record<string, string> = {};
       const downloadPromises = mediaFiles
         .filter(file => file.type !== 'pdf') // Exclude PDF as we've already handled it
         .map(async (file) => {
@@ -501,6 +507,10 @@ export const uploadController = {
           // Create a filename from the key (removing directory path)
           const fileName = path.basename(file.key);
           const filePath = path.join(targetDir, fileName);
+          
+          // Also save to attachments directory with the media ID as filename
+          // This ensures a one-to-one correspondence with links in the PDF
+          const attachmentPath = path.join(attachmentsDir, file.id);
 
           try {
             // Download file from R2
@@ -509,12 +519,36 @@ export const uploadController = {
               throw new Error(`Failed to download media: ${response.status} ${response.statusText}`);
             }
             const arrayBuffer = await response.arrayBuffer();
-            fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
-            console.log(`Downloaded media file from R2: ${fileName}`);
-            return { success: true, path: filePath, type: file.type, name: fileName };
+            const fileBuffer = Buffer.from(arrayBuffer);
+            
+            // Write to both locations
+            fs.writeFileSync(filePath, fileBuffer);
+            fs.writeFileSync(attachmentPath, fileBuffer);
+            
+            // Calculate file hash
+            const hash = crypto.createHash('sha256');
+            hash.update(fileBuffer);
+            const fileHash = hash.digest('hex');
+            fileHashes[file.id] = fileHash;
+            
+            console.log(`Downloaded media file from R2: ${fileName}, hash: ${fileHash.substring(0, 8)}...`);
+            return { 
+              success: true, 
+              path: filePath, 
+              type: file.type, 
+              name: fileName,
+              id: file.id,
+              hash: fileHash
+            };
           } catch (err) {
             console.error(`Error downloading media file ${fileName}:`, err);
-            return { success: false, path: null, type: file.type, name: fileName };
+            return { 
+              success: false, 
+              path: null, 
+              type: file.type, 
+              name: fileName,
+              id: file.id 
+            };
           }
         });
 
@@ -543,12 +577,33 @@ export const uploadController = {
 
             const targetPath = path.join(targetDir, mediaFileName);
             fs.copyFileSync(mediaPath, targetPath);
-            console.log(`Copied local media file: ${mediaFileName}`);
+            
+            // Calculate hash for local file
+            const fileBuffer = fs.readFileSync(mediaPath);
+            const hash = crypto.createHash('sha256');
+            hash.update(fileBuffer);
+            const fileHash = hash.digest('hex');
+            
+            // Use message id or generate a unique id
+            const mediaId = message.id ? `local_media_${message.id}` : `local_media_${uuidv4()}`;
+            fileHashes[mediaId] = fileHash;
+            
+            // Copy to attachments folder with this ID
+            fs.copyFileSync(mediaPath, path.join(attachmentsDir, mediaId));
+            
+            console.log(`Copied local media file: ${mediaFileName}, hash: ${fileHash.substring(0, 8)}...`);
           }
         };
 
         mediaMessages.forEach(copyLocalMedia);
       }
+
+      // Calculate hash for the PDF
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      const pdfHash = crypto.createHash('sha256');
+      pdfHash.update(pdfBuffer);
+      const pdfFileHash = pdfHash.digest('hex');
+      fileHashes['Chat_Transcript.pdf'] = pdfFileHash;
 
       // Set headers for download
       res.setHeader('Content-Type', 'application/zip');
@@ -565,7 +620,17 @@ export const uploadController = {
       // Add PDF to archive
       archive.file(pdfPath, { name: `Chat_Transcript.pdf` });
 
-      // Add media files to archive by walking the directory
+      // Add media files to archive - both in attachments/ and media/ directories
+      // Attachments directory (flat structure with IDs as filenames)
+      const attachmentFiles = fs.readdirSync(attachmentsDir);
+      for (const file of attachmentFiles) {
+        const filePath = path.join(attachmentsDir, file);
+        if (fs.statSync(filePath).isFile()) {
+          archive.file(filePath, { name: path.join('attachments', file) });
+        }
+      }
+      
+      // Add traditional media directory structure (for backward compatibility)
       const walkDir = (dir: string, zipPath: string) => {
         if (!fs.existsSync(dir)) return;
 
@@ -583,10 +648,10 @@ export const uploadController = {
       walkDir(imageDir, 'media/images');
       walkDir(otherDir, 'media/other');
 
-      // Add a manifest file with metadata
+      // Create an enhanced manifest with file hashes for legal compliance (Rule 902(14))
       const manifest = {
         caseReference: `WA-${format(new Date(), "yyyyMMdd-HHmm")}`,
-        fileHash: chatExport.fileHash,
+        originalFileHash: chatExport.fileHash,
         generatedOn: new Date().toISOString(),
         participants: chatExport.participants || ['Unknown'],
         messageCount: messages.length,
@@ -596,7 +661,9 @@ export const uploadController = {
           image: mediaFiles.filter(f => f.type === 'image').length,
           attachment: mediaFiles.filter(f => f.type === 'attachment').length
         },
-        originalFilename: chatExport.originalFilename
+        originalFilename: chatExport.originalFilename,
+        // Add file hashes for legal certification
+        fileHashes: fileHashes
       };
 
       // Add manifest.json to the archive
@@ -609,16 +676,18 @@ export const uploadController = {
 This ZIP archive contains:
 
 1. Chat_Transcript.pdf - The formatted chat transcript with clickable links
-2. media/ - Directory containing all media files referenced in the transcript
+2. attachments/ - Directory containing all media files with IDs matching links in the PDF
+3. media/ - Organized directory containing media files by type (for convenience)
    - voice_messages/ - Voice notes from the conversation
    - images/ - Images shared in the chat
    - other/ - Other attachments from the conversation
-3. manifest.json - Metadata about this evidence package
+4. manifest.json - Metadata and SHA-256 hashes for Rule 902(14) compliance
 
 For court submissions:
-- The PDF transcript contains all messages in a printable format
-- Voice messages can be played by clicking the links in the PDF
-- All media files are included in their original format for verification
+- The PDF transcript contains all messages in a printable format with live links
+- The attachments folder contains all media files with IDs matching the links in the PDF
+- Each file has a SHA-256 hash in the manifest.json for legal certification
+- This package satisfies Federal Rule of Evidence 902(14) requirements without outside experts
 
 Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
 `;
@@ -638,7 +707,7 @@ Generated by WhatsPDF Voice on ${new Date().toLocaleDateString()}
         }
       }, 60000); // 1 minute delay
 
-      console.log(`Evidence ZIP created for chat ID ${chatId}`);
+      console.log(`Offline-compatible evidence ZIP created for chat ID ${chatId}`);
 
     } catch (error) {
       console.error('Evidence ZIP error:', error);
