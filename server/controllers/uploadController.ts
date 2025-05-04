@@ -246,7 +246,10 @@ export const uploadController = {
           // Update chatData with new media URLs before generating PDF
           const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
           chatData.messages = updatedMessages;
-
+          
+          // Make sure chatData has the saved ID for media file lookup
+          chatData.id = savedChatExport.id;
+          
           // Generate PDF
           console.log('Starting PDF generation for chat export:', savedChatExport.id);
           storage.saveProcessingProgress(clientId, 80, ProcessingStep.GENERATE_PDF);
