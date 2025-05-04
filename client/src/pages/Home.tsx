@@ -94,6 +94,25 @@ export default function Home() {
               setPdfUrl(data.pdfUrl);
               setIsFileProcessed(true);
               setRequiresPayment(false);
+              
+              // Try to fetch chat data for preview
+              if (data.chatExportId) {
+                try {
+                  console.log(`Fetching chat data for chat export ${data.chatExportId}`);
+                  const chatResponse = await fetch(`/api/whatsapp/chat/${data.chatExportId}`);
+                  if (chatResponse.ok) {
+                    const chatData = await chatResponse.json();
+                    console.log(`Chat data fetched successfully with ${chatData.messages?.length} messages`);
+                    setChatData(chatData);
+                  } else {
+                    console.error(`Failed to fetch chat data, status: ${chatResponse.status}`);
+                  }
+                } catch (chatError) {
+                  console.error('Error fetching chat data:', chatError);
+                }
+              } else {
+                console.error('No chatExportId found in bundle data');
+              }
             } else {
               console.error('Payment success but no PDF URL available');
               
@@ -115,6 +134,22 @@ export default function Home() {
                     setPdfUrl(repairData.pdfUrl);
                     setIsFileProcessed(true);
                     setRequiresPayment(false);
+                    
+                    // Try to fetch the chat export data to display correctly
+                    if (data.chatExportId) {
+                      try {
+                        const chatResponse = await fetch(`/api/whatsapp/chat/${data.chatExportId}`);
+                        if (chatResponse.ok) {
+                          const chatData = await chatResponse.json();
+                          console.log('Fetched chat data:', chatData);
+                          setChatData(chatData);
+                        } else {
+                          console.error('Failed to fetch chat data after payment');
+                        }
+                      } catch (chatError) {
+                        console.error('Error fetching chat data after payment:', chatError);
+                      }
+                    }
                     
                     toast({
                       title: "Download Ready",

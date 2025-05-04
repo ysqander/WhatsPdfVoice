@@ -74,6 +74,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/whatsapp/download', uploadController.downloadPdf);
   app.get('/api/whatsapp/evidence-zip/:chatId', uploadController.downloadEvidenceZip);
   
+  // Get chat export by ID (for showing previews after payment)
+  app.get('/api/whatsapp/chat/:chatExportId', async (req, res) => {
+    try {
+      const chatExportId = parseInt(req.params.chatExportId, 10);
+      
+      if (isNaN(chatExportId)) {
+        return res.status(400).json({ error: 'Invalid chat export ID' });
+      }
+      
+      console.log(`Fetching chat export ${chatExportId}`);
+      
+      // Get chat export from storage 
+      const chatExport = await storage.getChatExport(chatExportId);
+      
+      if (!chatExport) {
+        console.error(`Chat export ${chatExportId} not found`);
+        return res.status(404).json({ error: 'Chat export not found' });
+      }
+      
+      // Get messages for this chat export
+      const messages = await storage.getMessagesByChatExportId(chatExportId);
+      
+      // Add messages to the chat export object
+      const chatData = {
+        ...chatExport,
+        messages
+      };
+      
+      console.log(`Returning chat export ${chatExportId} with ${messages.length} messages`);
+      
+      res.json(chatData);
+    } catch (error) {
+      console.error('Error fetching chat export:', error);
+      res.status(500).json({ error: 'Error fetching chat export' });
+    }
+  });
+  
   // Add PDF serving route
   app.get('/api/whatsapp/pdf/:filename', (req, res) => {
     const filename = req.params.filename;
