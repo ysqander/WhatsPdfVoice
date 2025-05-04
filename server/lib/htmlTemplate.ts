@@ -144,23 +144,38 @@ export function generateHTML(chatData: ChatExport): string {
         }
         
         .voice-link {
-          display: flex;
+          display: inline-flex;
           align-items: center;
+          background-color: #f5f9ff;
+          border: 1px solid #3498DB;
+          border-radius: 8px;
           color: #3498DB;
           text-decoration: none;
           font-weight: 600;
-          margin-bottom: 8px;
+          padding: 8px 12px;
+          margin: 8px 0 12px 0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .voice-link-icon {
-          font-size: 16px;
-          margin-right: 6px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background-color: #3498DB;
+          color: white;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          margin-right: 10px;
+          font-size: 14px;
         }
         
         .duration-info {
           font-size: 12px;
           color: #888;
           margin-top: 4px;
+          display: block;
+          margin-left: 2px;
         }
         
         .page-number {

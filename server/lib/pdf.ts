@@ -214,20 +214,41 @@ async function generatePdfWithPdfLib(
         if (message.mediaUrl) {
           const playText = "> Play Voice Message";
           
-          // Draw the link text with improved styling
+          // Create button-like appearance with a box around the text
+          // Draw a colored background box
+          const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
+          const buttonPadding = 8;
+          const buttonX = margin + 20;
+          const buttonY = y - 4;
+          const buttonWidth = textWidth + (buttonPadding * 2);
+          const buttonHeight = 20;
+          
+          // Draw button border (light blue rectangle)
+          currentPage.drawRectangle({
+            x: buttonX,
+            y: buttonY - buttonHeight,
+            width: buttonWidth,
+            height: buttonHeight,
+            borderWidth: 1,
+            borderColor: rgb(0.2, 0.6, 0.86), // #3498DB
+            color: rgb(0.96, 0.98, 1), // Light blue background #f5f9ff
+            borderOpacity: 0.8,
+            opacity: 0.3,
+          });
+          
+          // Draw the link text on top of the background
           currentPage.drawText(playText, {
-            x: margin + 20,
-            y,
+            x: buttonX + buttonPadding,
+            y: buttonY - buttonHeight/2 - 4,
             size: 10,
             font: timesRomanBoldFont,
             color: rgb(0.2, 0.6, 0.86), // #3498DB
           });
           
-          // Compute link bounds
-          const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
-          const linkHeight = 12;
-          const linkX = margin + 20;
-          const linkY = y - 2;
+          // Compute link bounds for the hyperlink area
+          const linkHeight = buttonHeight;
+          const linkX = buttonX;
+          const linkY = buttonY - buttonHeight;
           
           // For voice messages with an R2-stored media, use our proxy endpoint
           let messageId: string | number | undefined;
@@ -275,7 +296,7 @@ async function generatePdfWithPdfLib(
             pdfDoc.context.obj({
               Type: PDFName.of('Annot'),
               Subtype: PDFName.of('Link'),
-              Rect: [linkX, linkY, linkX + textWidth, linkY + linkHeight],
+              Rect: [linkX, linkY, linkX + buttonWidth, linkY + linkHeight],
               Border: [0, 0, 0],
               A: {
                 Type: PDFName.of('Action'),
@@ -304,7 +325,7 @@ async function generatePdfWithPdfLib(
             const formattedDuration = formatDuration(message.duration);
             currentPage.drawText(`Duration: ${formattedDuration}`, {
               x: margin + 20,
-              y: y - 15,
+              y: buttonY - buttonHeight - 12,  // Position below the button with padding
               size: 8,
               font: timesRomanFont,
               color: rgb(0.5, 0.5, 0.5),
