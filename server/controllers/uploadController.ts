@@ -507,6 +507,7 @@ export const uploadController = {
           // Determine target directory based on file type
           let targetDir = otherDir;
           
+          // Note: In our system 'voice' is the common type, but 'audio' could be used too
           if (file.type === 'voice' || file.type === 'audio') {
             targetDir = audioDir;
           } else if (file.type === 'image') {

@@ -126,6 +126,7 @@ async function generatePdfWithPdfLib(
         timesRomanBoldFont,
         width,
         y,
+        pdfDoc, // Pass the pdfDoc for link annotations
     );
 
     // --- Group Messages by Date ---
@@ -286,6 +287,205 @@ async function generatePdfWithPdfLib(
         } // End loop through messages for the date
     } // End loop through dates
 
+    // --- Add Media Files Summary Page ---
+    // Add a page at the end with file hash information
+    const summaryPage = pdfDoc.addPage(PageSizes.A4);
+    let summaryY = height - MARGIN;
+    
+    // Draw heading
+    summaryPage.drawText("MEDIA FILES AND AUTHENTICATION SUMMARY", {
+        x: width / 2 - timesRomanBoldFont.widthOfTextAtSize("MEDIA FILES AND AUTHENTICATION SUMMARY", 14) / 2,
+        y: summaryY,
+        size: 14,
+        font: timesRomanBoldFont,
+        color: PRIMARY_COLOR,
+    });
+    summaryY -= 30;
+    
+    // Draw explanatory text
+    summaryPage.drawText("This page provides a summary of all media files referenced in this transcript for Rule 902(14) compliance.", {
+        x: MARGIN,
+        y: summaryY,
+        size: 10,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 20;
+    
+    summaryPage.drawText("Media files are referenced by their unique identifier in the transcript links. These identifiers", {
+        x: MARGIN,
+        y: summaryY,
+        size: 10,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 15;
+    
+    summaryPage.drawText("correspond to filenames in the attachments directory of the evidence package.", {
+        x: MARGIN,
+        y: summaryY,
+        size: 10,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 30;
+    
+    // Draw table headers
+    const colWidths = [120, 240, 90];
+    const colX = [MARGIN, MARGIN + colWidths[0], MARGIN + colWidths[0] + colWidths[1]];
+    
+    summaryPage.drawText("MEDIA ID", {
+        x: colX[0],
+        y: summaryY,
+        size: 10,
+        font: timesRomanBoldFont,
+        color: PRIMARY_COLOR,
+    });
+    
+    summaryPage.drawText("ORIGINAL FILENAME", {
+        x: colX[1],
+        y: summaryY,
+        size: 10,
+        font: timesRomanBoldFont,
+        color: PRIMARY_COLOR,
+    });
+    
+    summaryPage.drawText("TYPE", {
+        x: colX[2],
+        y: summaryY,
+        size: 10,
+        font: timesRomanBoldFont,
+        color: PRIMARY_COLOR,
+    });
+    
+    summaryY -= 15;
+    
+    // Draw horizontal line
+    summaryPage.drawLine({
+        start: { x: MARGIN, y: summaryY + 5 },
+        end: { x: width - MARGIN, y: summaryY + 5 },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+    });
+    
+    summaryY -= 15;
+    
+    // Draw media file entries (up to what fits on the page)
+    const mediaFilesArray = Array.from(mediaFilesMap.values());
+    const entriesPerPage = 25; // Approximate, adjust based on actual space needs
+    
+    // If we have no media files, show a message
+    if (mediaFilesArray.length === 0) {
+        summaryPage.drawText("No media files are present in this transcript.", {
+            x: MARGIN,
+            y: summaryY,
+            size: 10,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        });
+        summaryY -= 20;
+    } else {
+        // Draw media file entries
+        for (let i = 0; i < Math.min(mediaFilesArray.length, entriesPerPage); i++) {
+            const file = mediaFilesArray[i];
+            if (!file || !file.id) continue;
+            
+            // Truncate filename if too long
+            const origFilename = file.originalName || path.basename(file.key || "unknown");
+            const truncatedFilename = origFilename.length > 40 ? 
+                origFilename.substring(0, 37) + "..." : 
+                origFilename;
+            
+            // Draw media ID (truncated if needed)
+            const mediaId = file.id.length > 15 ? file.id.substring(0, 12) + "..." : file.id;
+            summaryPage.drawText(mediaId, {
+                x: colX[0],
+                y: summaryY,
+                size: 9,
+                font: timesRomanFont,
+                color: TEXT_COLOR,
+            });
+            
+            // Draw original filename
+            summaryPage.drawText(truncatedFilename, {
+                x: colX[1],
+                y: summaryY,
+                size: 9,
+                font: timesRomanFont,
+                color: TEXT_COLOR,
+            });
+            
+            // Draw media type
+            summaryPage.drawText(file.type || "unknown", {
+                x: colX[2],
+                y: summaryY,
+                size: 9,
+                font: timesRomanFont,
+                color: TEXT_COLOR,
+            });
+            
+            summaryY -= 15;
+            
+            // Add a thin separator line
+            if (i < Math.min(mediaFilesArray.length, entriesPerPage) - 1) {
+                summaryPage.drawLine({
+                    start: { x: MARGIN, y: summaryY + 7 },
+                    end: { x: width - MARGIN, y: summaryY + 7 },
+                    thickness: 0.5,
+                    color: rgb(0.9, 0.9, 0.9),
+                });
+                summaryY -= 5;
+            }
+        }
+    }
+    
+    // Add legal text at bottom
+    summaryY = Math.min(summaryY, 150); // Ensure enough space at bottom
+    
+    summaryPage.drawText("LEGAL AUTHENTICATION", {
+        x: MARGIN,
+        y: summaryY,
+        size: 12,
+        font: timesRomanBoldFont,
+        color: PRIMARY_COLOR,
+    });
+    summaryY -= 20;
+    
+    summaryPage.drawText("This transcript and its associated media files have been prepared in accordance with", {
+        x: MARGIN,
+        y: summaryY,
+        size: 9,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 15;
+    
+    summaryPage.drawText("Federal Rule of Evidence 902(14), which provides for self-authentication of electronic evidence.", {
+        x: MARGIN,
+        y: summaryY,
+        size: 9,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 15;
+    
+    summaryPage.drawText("The included manifest.json file contains SHA-256 cryptographic hashes of all files in this package.", {
+        x: MARGIN,
+        y: summaryY,
+        size: 9,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    summaryY -= 15;
+    
+    summaryPage.drawText("These hashes can be independently verified to confirm file integrity without expert testimony.", {
+        x: MARGIN,
+        y: summaryY,
+        size: 9,
+        font: timesRomanFont,
+        color: TEXT_COLOR,
+    });
+    
     // --- Add Page Numbers to All Pages ---
     const totalPages = pdfDoc.getPageCount();
     for (let i = 0; i < totalPages; i++) {
@@ -323,6 +523,7 @@ function drawPdfHeader(
     boldFont: PDFFont,
     pageWidth: number,
     startY: number,
+    pdfDoc?: PDFDocument, // Make pdfDoc optional for backward compatibility
 ): number {
     let y = startY;
     const title = "WhatsApp Conversation Transcript";
@@ -434,6 +635,56 @@ function drawPdfHeader(
 
     y -= 10; // Extra space before separator line
 
+    // Add link to media summary page
+    const mediaLinkText = ">> See Media Files and Authentication Summary on the Last Page";
+    const linkY = y - 15;
+    page.drawText(mediaLinkText, {
+        x: pageWidth - MARGIN - textFont.widthOfTextAtSize(mediaLinkText, 9),
+        y: linkY,
+        size: 9,
+        font: textFont,
+        color: LINK_COLOR,
+    });
+    
+    // Only create PDF annotations if we have the pdfDoc
+    if (pdfDoc) {
+        try {
+            // Create annotation for the link to the last page
+            const textWidth = textFont.widthOfTextAtSize(mediaLinkText, 9);
+            const linkAnnotationRef = pdfDoc?.context.register(
+                pdfDoc?.context.obj({
+                    Type: PDFName.of("Annot"),
+                    Subtype: PDFName.of("Link"),
+                    Rect: [
+                        pageWidth - MARGIN - textWidth, 
+                        linkY - 2, 
+                        pageWidth - MARGIN, 
+                        linkY + 10
+                    ],
+                    Border: [0, 0, 0],
+                    Dest: [pdfDoc?.getPageCount() || 1, PDFName.of("XYZ"), null, null, null]
+                })
+            );
+            
+            // Add annotation to the page's annotations array
+            let annots = page.node.lookup(PDFName.of("Annots"), PDFArray);
+            if (!annots) {
+                annots = pdfDoc?.context.obj([]);
+                page.node.set(PDFName.of("Annots"), annots);
+            }
+            
+            // Add the annotation only if both linkAnnotationRef and annots exist
+            if (linkAnnotationRef && annots) {
+                annots.push(linkAnnotationRef);
+            }
+        } catch (error) {
+            // Silently fail on annotation creation - annotations are not critical
+            console.error("Failed to create summary page link annotation:", error);
+        }
+    }
+    
+    y -= 25; // Extra space before separator line
+    
     // Draw horizontal line separator
     page.drawLine({
         start: { x: MARGIN, y: y },
