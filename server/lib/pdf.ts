@@ -265,33 +265,33 @@ async function generatePdfWithPdfLib(
           
           console.log(`Using app base URL: ${appBaseUrl}`);
           
-          // With our privacy-focused approach, voice message URLs are already in the proxy format
-          // We just need to ensure they're absolute URLs
-          if (message.mediaUrl) {
-            if (message.mediaUrl.startsWith('/api/media/proxy/')) {
-              // It's a relative proxy URL, make it absolute
-              proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
-              console.log(`Using absolute proxy URL: ${proxyUrl}`);
-            } 
-            else if (message.mediaUrl.includes('/api/media/proxy/')) {
-              // Already an absolute proxy URL
-              proxyUrl = message.mediaUrl;
-              console.log(`Using existing proxy URL: ${proxyUrl}`);
-            }
-            else if (message.mediaUrl.startsWith('/')) {
-              // Some other relative URL - make it absolute
-              proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
-              console.log(`Making relative URL absolute: ${proxyUrl}`);
-            } 
-            else {
-              // Use as-is (direct R2 or external URL)
-              proxyUrl = message.mediaUrl;
-              console.log(`WARNING: Using non-proxy URL in PDF: ${proxyUrl.substring(0, 50)}...`);
+          // If this is an R2 URL, extract the mediaId from our storage
+          if (message.id) {
+            messageId = message.id;
+            const mediaFiles = await storage.getMediaFilesByChat(chatData.id!);
+            // Find the media file associated with this message
+            const mediaFile = mediaFiles.find(file => file.messageId === messageId);
+            
+            if (mediaFile) {
+              // Use our proxy endpoint which will generate fresh signed URLs on demand
+              // Using absolute URL that includes the hostname
+              proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaFile.id}`;
+              console.log(`Generated proxy URL for voice message: ${proxyUrl}`);
+            } else {
+              // Fallback - try to make the original media URL absolute if it's relative
+              if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+                proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
+              } else {
+                proxyUrl = message.mediaUrl || '';
+              }
             }
           } else {
-            // No media URL (shouldn't happen for voice messages)
-            proxyUrl = '';
-            console.log(`WARNING: Voice message with no media URL: ${message.id}`);
+            // Fallback - try to make the original media URL absolute if it's relative
+            if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+              proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
+            } else {
+              proxyUrl = message.mediaUrl || '';
+            }
           }
 
           // Create and register the annotation with correct structure using PDFName and PDFString

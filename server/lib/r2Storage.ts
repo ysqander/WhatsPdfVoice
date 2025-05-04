@@ -62,14 +62,12 @@ export interface R2StorageObjectMetadata {
  * @param filePath Local file path to upload
  * @param contentType MIME type of the file
  * @param directory Optional directory within the bucket
- * @param mediaId Optional explicit ID for the file (for privacy reasons)
  * @returns Object key in R2
  */
 export async function uploadFileToR2(
   filePath: string,
   contentType: string,
-  directory: string = "media",
-  mediaId?: string
+  directory: string = "media"
 ): Promise<string> {
   try {
     // Validate file exists
@@ -83,12 +81,11 @@ export async function uploadFileToR2(
       fileExt = ALLOWED_MIME_TYPES[contentType];
     }
 
-    // Generate or use provided ID
-    const uniqueId = mediaId || uuidv4();
-    
-    // For privacy reasons, don't use original filenames in object keys
-    // Just use the ID with an extension
-    const key = `${directory}/${uniqueId}${fileExt}`;
+    // Generate unique key
+    const uniqueId = uuidv4();
+    const fileName = path.basename(filePath, path.extname(filePath));
+    const sanitizedName = fileName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+    const key = `${directory}/${sanitizedName}_${uniqueId}${fileExt}`;
 
     // Read file data
     const fileContent = fs.readFileSync(filePath);
