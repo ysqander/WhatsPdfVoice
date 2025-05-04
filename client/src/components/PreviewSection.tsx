@@ -44,27 +44,7 @@ export default function PreviewSection({
       <div className="bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col">
         <div className="bg-primary text-white py-3 px-4 flex justify-between items-center">
           <h2 className="text-lg font-semibold">PDF Preview</h2>
-          <div className="flex space-x-2">
-            <button 
-              className="text-white hover:text-accent transition-colors" 
-              title="Previous Page"
-              onClick={handlePreviousPage}
-              disabled={currentPage <= 1}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-sm">
-              Page <span>{currentPage}</span> of <span>{totalPages}</span>
-            </span>
-            <button 
-              className="text-white hover:text-accent transition-colors" 
-              title="Next Page"
-              onClick={handleNextPage}
-              disabled={currentPage >= totalPages}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          
         </div>
 
         {/* PDF Content */}
