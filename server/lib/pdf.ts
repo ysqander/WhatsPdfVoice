@@ -214,15 +214,21 @@ async function generatePdfWithPdfLib(
         if (message.mediaUrl) {
           const playText = "> Play Voice Message";
           
+          // Check if we need a new page for the voice message and duration
+          // We need at least 60 pixels for the entire voice message component
+          if (y < margin + 60) {
+            currentPage = pdfDoc.addPage();
+            y = height - margin;
+          }
+          
           // Add extra vertical spacing before voice messages
-          y -= 10;
+          y -= 15;
           
           // Create button-like appearance with a box around the text
-          // Draw a colored background box
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
           const buttonPadding = 8;
           const buttonX = margin + 20;
-          const buttonY = y - 4;
+          const buttonY = y;  // Start at current Y position
           const buttonWidth = textWidth + (buttonPadding * 2);
           const buttonHeight = 20;
           
@@ -323,23 +329,35 @@ async function generatePdfWithPdfLib(
             );
           }
 
+          // Update our y-position to be right below the button
+          y = buttonY - buttonHeight - 5;
+          
           // For the duration text
           if (message.duration) {
+            // Check if we need a new page for the duration text
+            if (y < margin + 15) {
+              currentPage = pdfDoc.addPage();
+              y = height - margin;
+            }
+            
             const formattedDuration = formatDuration(message.duration);
             currentPage.drawText(`Duration: ${formattedDuration}`, {
               x: margin + 20,
-              y: buttonY - buttonHeight - 12,  // Position below the button with padding
+              y,
               size: 8,
               font: timesRomanFont,
               color: rgb(0.5, 0.5, 0.5),
             });
             
-            // Add extra spacing after voice messages with duration
-            y = buttonY - buttonHeight - 30;
+            // Move below the duration text with adequate spacing
+            y -= 20;
           } else {
-            // Standard spacing for voice messages without duration
-            y = buttonY - buttonHeight - 15;
+            // Add standard spacing below the button
+            y -= 10;
           }
+          
+          // Add extra padding after the entire voice message component
+          y -= 10;
         } else {
           // Fallback for voice messages without a media URL
           currentPage.drawText("[Voice Message]", {
