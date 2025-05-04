@@ -332,32 +332,8 @@ async function generatePdfWithPdfLib(
           // Update our y-position to be right below the button
           y = buttonY - buttonHeight - 5;
 
-          // For the duration text
-          if (message.duration) {
-            // Check if we need a new page for the duration text
-            if (y < margin + 15) {
-              currentPage = pdfDoc.addPage();
-              y = height - margin;
-            }
-
-            const formattedDuration = formatDuration(message.duration);
-            currentPage.drawText(`Duration: ${formattedDuration}`, {
-              x: margin + 20,
-              y,
-              size: 8,
-              font: timesRomanFont,
-              color: rgb(0.5, 0.5, 0.5),
-            });
-
-            // Move below the duration text with adequate spacing
-            y -= 20;
-          } else {
-            // Add standard spacing below the button
-            y -= 10;
-          }
-
-          // Add extra padding after the entire voice message component
-          y -= 10;
+          // Add standard spacing below the button
+          y -= 20;
         } else {
           // Fallback for voice messages without a media URL
           currentPage.drawText("[Voice Message]", {
