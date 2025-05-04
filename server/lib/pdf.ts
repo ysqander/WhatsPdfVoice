@@ -15,6 +15,7 @@ import {
 import fs from "fs";
 import path from "path";
 import os from "os";
+import crypto from "crypto";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 // Removed puppeteer import
@@ -633,15 +634,99 @@ async function generatePdfWithPdfLib(
             // Add SHA-256 hash on the next line with some indentation
             const hashLabel = "SHA-256: ";
             
-            // Calculate hash for the file
+            // Calculate hash for the file if possible or use existing
             let fileHash = "Not available offline. See manifest.json in the evidence package.";
             
             // If we have a hash already in the file object, use it
             if (file.fileHash) {
                 fileHash = file.fileHash;
-            } else {
-                // When file has a proper key, we could access it in the future to calculate the hash
-                if (file.key && file.key.includes('/')) {
+            } 
+            // Try to calculate the hash from the actual file if it exists
+            else {
+                try {
+                    // First determine where the file might be
+                    // Options: 
+                    // 1. Media dir with chat ID: /tmp/whatspdf/media/{chatId}/{filename}
+                    // 2. Media dir directly: /tmp/whatspdf/media/{filename}
+                    let mediaFilePath = '';
+                    let fileExists = false;
+                    
+                    // Try the most likely paths for the file
+                    if (file.key) {
+                        // If there's a file.key with path info
+                        const baseName = path.basename(file.key);
+                        
+                        // Try with chatId subdirectory
+                        if (chatData.id) {
+                            const pathWithChatId = path.join(os.tmpdir(), 'whatspdf', 'media', 
+                                chatData.id.toString(), baseName);
+                            if (fs.existsSync(pathWithChatId)) {
+                                mediaFilePath = pathWithChatId;
+                                fileExists = true;
+                            }
+                        }
+                        
+                        // If not found, try main media directory
+                        if (!fileExists) {
+                            const pathWithoutChatId = path.join(os.tmpdir(), 'whatspdf', 'media', baseName);
+                            if (fs.existsSync(pathWithoutChatId)) {
+                                mediaFilePath = pathWithoutChatId;
+                                fileExists = true;
+                            }
+                        }
+                        
+                        // If file exists, calculate its hash
+                        if (fileExists) {
+                            const fileBuffer = fs.readFileSync(mediaFilePath);
+                            const hash = crypto.createHash('sha256');
+                            hash.update(fileBuffer);
+                            fileHash = hash.digest('hex');
+                            
+                            // Save hash to the file object for future reference
+                            file.fileHash = fileHash;
+                            
+                            console.log(`PDF: Calculated SHA-256 hash for ${path.basename(mediaFilePath)}: ${fileHash.substring(0, 8)}...`);
+                        } else {
+                            fileHash = `[Available in evidence package manifest.json]`;
+                        }
+                    } else if (file.originalName) {
+                        // If key isn't available but original name is
+                        // Try with chatId subdirectory
+                        if (chatData.id) {
+                            const pathWithChatId = path.join(os.tmpdir(), 'whatspdf', 'media', 
+                                chatData.id.toString(), file.originalName);
+                            if (fs.existsSync(pathWithChatId)) {
+                                mediaFilePath = pathWithChatId;
+                                fileExists = true;
+                            }
+                        }
+                        
+                        // If not found, try main media directory
+                        if (!fileExists) {
+                            const pathWithoutChatId = path.join(os.tmpdir(), 'whatspdf', 'media', file.originalName);
+                            if (fs.existsSync(pathWithoutChatId)) {
+                                mediaFilePath = pathWithoutChatId;
+                                fileExists = true;
+                            }
+                        }
+                        
+                        // If file exists, calculate its hash
+                        if (fileExists) {
+                            const fileBuffer = fs.readFileSync(mediaFilePath);
+                            const hash = crypto.createHash('sha256');
+                            hash.update(fileBuffer);
+                            fileHash = hash.digest('hex');
+                            
+                            // Save hash to the file object for future reference
+                            file.fileHash = fileHash;
+                            
+                            console.log(`PDF: Calculated SHA-256 hash for ${file.originalName}: ${fileHash.substring(0, 8)}...`);
+                        } else {
+                            fileHash = `[Available in evidence package manifest.json]`;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error calculating file hash:', err);
                     fileHash = `[Available in evidence package manifest.json]`;
                 }
             }
