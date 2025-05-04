@@ -120,6 +120,12 @@ export default function UploadSection({
           // Check if we're at the payment required step
           if (data.step === ProcessingStep.PAYMENT_REQUIRED && setCurrentStep) {
             setCurrentStep(ProcessingStep.PAYMENT_REQUIRED);
+            
+            // Mark the payment step as done
+            const paymentStepIndex = processingSteps.findIndex(step => step.name === 'Payment Required');
+            if (paymentStepIndex !== -1) {
+              updateStep(paymentStepIndex, true);
+            }
           }
         }
         
@@ -169,12 +175,20 @@ export default function UploadSection({
       
       source.onerror = () => {
         source.close();
-        setIsProcessing(false);
-        toast({
-          variant: "destructive",
-          title: "Error processing file",
-          description: "Connection to server lost"
-        });
+        
+        // If we are at the payment required step, this is actually expected
+        // We don't want to show an error toast
+        if (processingSteps.find(step => step.name === 'Payment Required')?.done) {
+          console.log('EventSource connection closed after payment requirement detected');
+          setIsProcessing(false);
+        } else {
+          setIsProcessing(false);
+          toast({
+            variant: "destructive",
+            title: "Error processing file",
+            description: "Connection to server lost"
+          });
+        }
       };
       
     } catch (error) {
