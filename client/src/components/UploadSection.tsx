@@ -6,7 +6,7 @@ import ProcessingStatus from "./ProcessingStatus";
 import { Cog, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
-import { ChatExport, ProcessingOptions as ProcessingOptionsType } from "@shared/types";
+import { ChatExport, ProcessingOptions as ProcessingOptionsType, ProcessingStep } from "@shared/types";
 
 interface UploadSectionProps {
   file: File | null;
@@ -28,6 +28,13 @@ interface UploadSectionProps {
   processingOptions: ProcessingOptionsType;
   setProcessingOptions: (options: ProcessingOptionsType) => void;
   resetState: () => void;
+  // Payment-related props
+  setRequiresPayment?: (requires: boolean) => void;
+  setMessageCount?: (count: number) => void;
+  setMediaSizeBytes?: (size: number) => void;
+  setBundleId?: (id: string | null) => void;
+  setCheckoutUrl?: (url: string | null) => void;
+  setCurrentStep?: (step: ProcessingStep | null) => void;
 }
 
 export default function UploadSection({
@@ -49,7 +56,14 @@ export default function UploadSection({
   setChatData,
   processingOptions,
   setProcessingOptions,
-  resetState
+  resetState,
+  // Payment-related props
+  setRequiresPayment,
+  setMessageCount,
+  setMediaSizeBytes,
+  setBundleId,
+  setCheckoutUrl,
+  setCurrentStep
 }: UploadSectionProps) {
   const { toast } = useToast();
   
@@ -102,20 +116,54 @@ export default function UploadSection({
           if (data.step < processingSteps.length) {
             updateStep(data.step, false);
           }
+          
+          // Check if we're at the payment required step
+          if (data.step === ProcessingStep.PAYMENT_REQUIRED && setCurrentStep) {
+            setCurrentStep(ProcessingStep.PAYMENT_REQUIRED);
+          }
+        }
+        
+        // Check if payment is required
+        if (data.requiresPayment && setRequiresPayment) {
+          setRequiresPayment(true);
+          
+          // Set payment-related information
+          if (setMessageCount && data.messageCount) {
+            setMessageCount(data.messageCount);
+          }
+          
+          if (setMediaSizeBytes && data.mediaSizeBytes) {
+            setMediaSizeBytes(data.mediaSizeBytes);
+          }
+          
+          if (setBundleId && data.bundleId) {
+            setBundleId(data.bundleId);
+          }
+          
+          if (setCheckoutUrl && data.checkoutUrl) {
+            setCheckoutUrl(data.checkoutUrl);
+          }
         }
         
         if (data.done) {
           source.close();
-          setIsFileProcessed(true);
-          setIsProcessing(false);
           
-          // Mark all steps as done
-          processingSteps.forEach((_, index) => {
-            updateStep(index, true);
-          });
-          
-          setPdfUrl(data.pdfUrl);
-          setChatData(data.chatData);
+          // Only mark as processed if no payment is required or we have a PDF URL
+          if (!data.requiresPayment || data.pdfUrl) {
+            setIsFileProcessed(true);
+            setIsProcessing(false);
+            
+            // Mark all steps as done
+            processingSteps.forEach((_, index) => {
+              updateStep(index, true);
+            });
+            
+            setPdfUrl(data.pdfUrl);
+            setChatData(data.chatData);
+          } else {
+            // Stop processing but don't mark as done
+            setIsProcessing(false);
+          }
         }
       };
       

@@ -4,8 +4,9 @@ import ProcessSteps from "@/components/ProcessSteps";
 import UploadSection from "@/components/UploadSection";
 import PreviewSection from "@/components/PreviewSection";
 import PaymentRequired from "@/components/PaymentRequired";
+import ProcessingStatus from "@/components/ProcessingStatus";
 import { useState, useEffect } from "react";
-import { ChatExport, ProcessingOptions, ProcessingStep } from "@shared/types";
+import { ChatExport, ProcessingOptions, ProcessingStep, FREE_TIER_MESSAGE_LIMIT, FREE_TIER_MEDIA_SIZE_LIMIT } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
@@ -100,32 +101,59 @@ export default function Home() {
             Upload your WhatsApp chat export (ZIP) and generate a professional PDF document 
             with preserved voice messages as interactive audio elements.
           </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Free tier: Up to {FREE_TIER_MESSAGE_LIMIT} messages and {FREE_TIER_MEDIA_SIZE_LIMIT / (1024 * 1024)}MB of media files
+          </p>
         </div>
 
         <ProcessSteps />
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-6xl mx-auto">
-          <UploadSection 
-            file={file}
-            setFile={setFile}
-            isUploading={isUploading}
-            setIsUploading={setIsUploading}
-            uploadProgress={uploadProgress}
-            setUploadProgress={setUploadProgress}
-            isProcessing={isProcessing}
-            setIsProcessing={setIsProcessing}
-            processingProgress={processingProgress}
-            setProcessingProgress={setProcessingProgress}
-            processingSteps={processingSteps}
-            setProcessingSteps={setProcessingSteps}
-            isFileProcessed={isFileProcessed}
-            setIsFileProcessed={setIsFileProcessed}
-            setPdfUrl={setPdfUrl}
-            setChatData={setChatData}
-            processingOptions={processingOptions}
-            setProcessingOptions={setProcessingOptions}
-            resetState={resetState}
-          />
+          <div className="lg:col-span-2">
+            <UploadSection 
+              file={file}
+              setFile={setFile}
+              isUploading={isUploading}
+              setIsUploading={setIsUploading}
+              uploadProgress={uploadProgress}
+              setUploadProgress={setUploadProgress}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+              processingProgress={processingProgress}
+              setProcessingProgress={setProcessingProgress}
+              processingSteps={processingSteps}
+              setProcessingSteps={setProcessingSteps}
+              isFileProcessed={isFileProcessed}
+              setIsFileProcessed={setIsFileProcessed}
+              setPdfUrl={setPdfUrl}
+              setChatData={setChatData}
+              processingOptions={processingOptions}
+              setProcessingOptions={setProcessingOptions}
+              resetState={resetState}
+              setRequiresPayment={setRequiresPayment}
+              setMessageCount={setMessageCount}
+              setMediaSizeBytes={setMediaSizeBytes}
+              setBundleId={setBundleId}
+              setCheckoutUrl={setCheckoutUrl}
+              setCurrentStep={setCurrentStep}
+            />
+            
+            {requiresPayment && currentStep === ProcessingStep.PAYMENT_REQUIRED && (
+              <PaymentRequired 
+                messageCount={messageCount}
+                mediaSizeBytes={mediaSizeBytes}
+                bundleId={bundleId || ''}
+                checkoutUrl={checkoutUrl}
+              />
+            )}
+
+            {isProcessing && !requiresPayment && (
+              <ProcessingStatus 
+                progress={processingProgress}
+                steps={processingSteps}
+              />
+            )}
+          </div>
           
           <PreviewSection 
             chatData={chatData}

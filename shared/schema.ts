@@ -22,7 +22,8 @@ export const insertMediaProxyFileSchema = createInsertSchema(mediaProxyFiles).om
 
 // Payment bundles table - tracks the status of chat export bundles that require payment
 export const paymentBundles = pgTable("payment_bundles", {
-  id: uuid("id").primaryKey().defaultRandom(), // The bundle ID used in payment metadata
+  id: uuid("id").primaryKey().defaultRandom(), // Internal ID
+  bundleId: text("bundle_id").notNull().unique(), // The bundle ID used in URLs and payment metadata
   chatExportId: integer("chat_export_id"), // Associated chat export ID (if any)
   r2TempKey: text("r2_temp_key"), // Temporary R2 storage location
   r2FinalKey: text("r2_final_key"), // Final R2 storage location after payment

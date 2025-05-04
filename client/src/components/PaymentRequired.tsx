@@ -124,7 +124,7 @@ export default function PaymentRequired({
               <span>Full PDF export with all {messageCount} messages</span>
             </li>
             <li className="flex items-start">
-              <FileZip className="w-4 h-4 mr-2 text-primary mt-0.5" />
+              <File className="w-4 h-4 mr-2 text-primary mt-0.5" />
               <span>All media files from your conversation ({mediaSize} MB)</span>
             </li>
             <li className="flex items-start">

@@ -189,24 +189,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   // Checkout routes
-  app.post('/api/checkout/:bundleId', async (req, res) => {
+  app.post('/api/create-payment-intent', async (req, res) => {
     try {
-      const { bundleId } = req.params;
-      const { email } = req.body;
+      const { bundleId } = req.body;
       
-      // Get bundle from database
-      const bundle = await paymentService.getBundleById(bundleId);
-      if (!bundle) {
-        return res.status(404).json({ error: 'Bundle not found' });
-      }
+      // Get the origin for success and cancel URLs
+      const origin = `${req.protocol}://${req.get('host')}`;
+      const successUrl = `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/payment-cancelled`;
       
-      // Get Stripe checkout session
-      const session = await stripe.checkout.sessions.retrieve(bundle.stripeSessionId);
+      // Create a checkout session
+      const checkoutUrl = await paymentService.createCheckoutSession(
+        bundleId,
+        successUrl,
+        cancelUrl
+      );
       
-      // Return checkout session URL
+      // Return the checkout URL
       res.json({ 
         success: true, 
-        checkoutUrl: session.url
+        clientSecret: null, // For compatibility with the client expectation
+        checkoutUrl
       });
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -218,44 +221,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Stripe Webhook endpoint - use a middleware that preserves the raw body
-  app.post('/webhook/payment', (req, res, next) => {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      req.rawBody = data;
-      next();
-    });
-  }, async (req: any, res) => {
+  app.post('/webhook/payment', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
-      // Verify webhook signature if secret is available
-      let event: Stripe.Event;
+      // Get the signature from the headers
+      const signature = req.headers['stripe-signature'] as string;
       
-      if (webhookSecret) {
-        const signature = req.headers['stripe-signature'] as string;
-        try {
-          event = stripe.webhooks.constructEvent(
-            req.rawBody,
-            signature,
-            webhookSecret
-          );
-        } catch (err) {
-          console.error(`⚠️ Webhook signature verification failed.`, err);
-          return res.status(400).send('Webhook signature verification failed');
-        }
-      } else {
-        // If no webhook secret is configured, use the event as-is (less secure)
-        event = req.body as Stripe.Event;
+      // Verify the signature
+      if (!paymentService.verifyWebhookSignature(req.body.toString(), signature)) {
+        console.error('⚠️ Webhook signature verification failed.');
+        return res.status(400).send('Webhook signature verification failed');
       }
       
-      // Handle the webhook event
-      const success = await paymentService.handleWebhookEvent(event);
+      // Parse the event
+      const event = JSON.parse(req.body.toString()) as Stripe.Event;
+      console.log(`Webhook received: ${event.type}`);
       
-      if (success) {
-        res.json({ received: true });
+      // Handle the webhook event type
+      if (event.type === 'checkout.session.completed') {
+        // Handle the checkout.session.completed event
+        const session = event.data.object as Stripe.Checkout.Session;
+        const bundle = await paymentService.handleCheckoutSessionCompleted(session.id);
+        
+        if (bundle) {
+          console.log(`Payment succeeded for bundle ${bundle.bundleId}`);
+          res.json({ received: true });
+        } else {
+          console.error('Bundle not found or payment failed');
+          res.status(400).json({ error: 'Failed to process payment' });
+        }
       } else {
-        res.status(400).json({ error: 'Failed to process webhook' });
+        // Ignore other event types
+        res.json({ received: true });
       }
     } catch (error) {
       console.error('Error handling webhook:', error);
@@ -275,18 +271,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send('No session ID provided');
       }
       
-      // Get bundle by session ID
-      const bundle = await paymentService.getBundleBySessionId(sessionId);
+      // Process the completed session
+      const bundle = await paymentService.handleCheckoutSessionCompleted(sessionId);
       
       if (!bundle) {
-        return res.status(404).send('Bundle not found');
+        return res.status(404).send('Bundle not found or payment could not be processed');
       }
       
-      // Get signed URL
-      const url = await paymentService.getSignedBundleUrl(bundle);
-      
-      // Redirect to client success page with bundle URL
-      res.redirect(`/?success=true&bundleUrl=${encodeURIComponent(url)}`);
+      // Redirect to client success page
+      res.redirect(`/?success=true&bundleId=${bundle.bundleId}`);
     } catch (error) {
       console.error('Error handling payment success:', error);
       res.status(500).send('Error processing payment');
@@ -298,30 +291,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect('/?cancelled=true');
   });
   
-  // Get bundle status and download link if paid
-  app.get('/api/bundle/:bundleId', async (req, res) => {
+  // Get bundle status
+  app.get('/api/payment/:bundleId', async (req, res) => {
     try {
       const { bundleId } = req.params;
       
-      // Get bundle
-      const bundle = await paymentService.getBundleById(bundleId);
+      // Get bundle from database
+      const bundle = await paymentService.getPaymentBundle(bundleId);
       
       if (!bundle) {
         return res.status(404).json({ error: 'Bundle not found' });
       }
       
-      // Get signed URL if bundle is paid
-      let downloadUrl = null;
-      if (bundle.isPaid) {
-        downloadUrl = await paymentService.getSignedBundleUrl(bundle);
-      }
-      
       res.json({
-        bundleId: bundle.id,
-        isPaid: bundle.isPaid,
+        bundleId: bundle.bundleId,
+        isPaid: bundle.paidAt !== null,
         messageCount: bundle.messageCount,
-        mediaSizeBytes: bundle.mediaSizeBytes,
-        downloadUrl
+        mediaSizeBytes: bundle.mediaSizeBytes
       });
     } catch (error) {
       console.error('Error getting bundle:', error);
