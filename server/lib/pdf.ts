@@ -1,5 +1,12 @@
 import { ChatExport, Message } from "@shared/types";
-import { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFString } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  PDFName,
+  PDFArray,
+  PDFString,
+} from "pdf-lib";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -221,15 +228,12 @@ async function generatePdfWithPdfLib(
             y = height - margin;
           }
 
-          // Add extra vertical spacing before voice messages
-          y -= 10;
-
           // Create button-like appearance with a box around the text
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
           const buttonPadding = 8;
           const buttonX = margin + 20;
-          const buttonY = y;  // Start at current Y position
-          const buttonWidth = textWidth + (buttonPadding * 2);
+          const buttonY = y; // Start at current Y position
+          const buttonWidth = textWidth + buttonPadding * 2;
           const buttonHeight = 20;
 
           // Draw button border (light blue rectangle)
@@ -248,7 +252,7 @@ async function generatePdfWithPdfLib(
           // Draw the link text on top of the background
           currentPage.drawText(playText, {
             x: buttonX + buttonPadding,
-            y: buttonY - buttonHeight/2 - 4,
+            y: buttonY - buttonHeight / 2 - 4,
             size: 10,
             font: timesRomanBoldFont,
             color: rgb(0.2, 0.6, 0.86), // #3498DB
@@ -265,9 +269,9 @@ async function generatePdfWithPdfLib(
 
           // Determine the base URL of our application for absolute URLs
           // In Replit, we can use REPLIT_DOMAINS or fallback to localhost
-          const appBaseUrl = process.env.REPLIT_DOMAINS 
+          const appBaseUrl = process.env.REPLIT_DOMAINS
             ? `https://${process.env.REPLIT_DOMAINS}`
-            : 'http://localhost:5000'; // Fallback for local development
+            : "http://localhost:5000"; // Fallback for local development
 
           console.log(`Using app base URL: ${appBaseUrl}`);
 
@@ -276,7 +280,9 @@ async function generatePdfWithPdfLib(
             messageId = message.id;
             const mediaFiles = await storage.getMediaFilesByChat(chatData.id!);
             // Find the media file associated with this message
-            const mediaFile = mediaFiles.find(file => file.messageId === messageId);
+            const mediaFile = mediaFiles.find(
+              (file) => file.messageId === messageId,
+            );
 
             if (mediaFile) {
               // Use our proxy endpoint which will generate fresh signed URLs on demand
@@ -285,38 +291,38 @@ async function generatePdfWithPdfLib(
               console.log(`Generated proxy URL for voice message: ${proxyUrl}`);
             } else {
               // Fallback - try to make the original media URL absolute if it's relative
-              if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+              if (message.mediaUrl && message.mediaUrl.startsWith("/")) {
                 proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
               } else {
-                proxyUrl = message.mediaUrl || '';
+                proxyUrl = message.mediaUrl || "";
               }
             }
           } else {
             // Fallback - try to make the original media URL absolute if it's relative
-            if (message.mediaUrl && message.mediaUrl.startsWith('/')) {
+            if (message.mediaUrl && message.mediaUrl.startsWith("/")) {
               proxyUrl = `${appBaseUrl}${message.mediaUrl}`;
             } else {
-              proxyUrl = message.mediaUrl || '';
+              proxyUrl = message.mediaUrl || "";
             }
           }
 
           // Create and register the annotation with correct structure using PDFName and PDFString
           const linkAnnotationRef = pdfDoc.context.register(
             pdfDoc.context.obj({
-              Type: PDFName.of('Annot'),
-              Subtype: PDFName.of('Link'),
+              Type: PDFName.of("Annot"),
+              Subtype: PDFName.of("Link"),
               Rect: [linkX, linkY, linkX + buttonWidth, linkY + linkHeight],
               Border: [0, 0, 0],
               A: {
-                Type: PDFName.of('Action'),
-                S: PDFName.of('URI'),
-                URI: PDFString.of(proxyUrl)
-              }
-            })
+                Type: PDFName.of("Action"),
+                S: PDFName.of("URI"),
+                URI: PDFString.of(proxyUrl),
+              },
+            }),
           );
 
           // Get existing annotations or create new array
-          let annots = currentPage.node.lookup(PDFName.of('Annots'));
+          let annots = currentPage.node.lookup(PDFName.of("Annots"));
 
           if (annots instanceof PDFArray) {
             // Push onto existing array
@@ -324,8 +330,8 @@ async function generatePdfWithPdfLib(
           } else {
             // Create new annotations array
             currentPage.node.set(
-              PDFName.of('Annots'),
-              pdfDoc.context.obj([linkAnnotationRef])
+              PDFName.of("Annots"),
+              pdfDoc.context.obj([linkAnnotationRef]),
             );
           }
 
