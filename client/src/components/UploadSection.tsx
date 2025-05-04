@@ -255,12 +255,6 @@ export default function UploadSection({
         </div>
       </div>
 
-      {isProcessing && (
-        <ProcessingStatus 
-          progress={processingProgress}
-          steps={processingSteps}
-        />
-      )}
-    </div>
+      </div>
   );
 }
