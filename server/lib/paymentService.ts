@@ -124,29 +124,8 @@ export class PaymentService {
     return session.url || '';
   }
 
-  /**
-   * Verify a Stripe webhook signature
-   * @param payload The raw webhook payload
-   * @param signature The Stripe signature header
-   * @returns True if signature is valid, false otherwise
-   */
-  verifyWebhookSignature(payload: string, signature: string): boolean {
-    try {
-      // Get the webhook secret from environment variables
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      if (!webhookSecret) {
-        console.error('STRIPE_WEBHOOK_SECRET environment variable is not set');
-        return false;
-      }
-      
-      // Verify the signature
-      const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-      return true;
-    } catch (error) {
-      console.error('Webhook signature verification failed', error);
-      return false;
-    }
-  }
+  // We don't need the verifyWebhookSignature method anymore
+  // as we're handling it directly in the routes
 
   /**
    * Handle a Stripe checkout.session.completed event

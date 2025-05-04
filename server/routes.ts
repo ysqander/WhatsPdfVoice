@@ -223,18 +223,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe Webhook endpoint - use a middleware that preserves the raw body
   app.post('/webhook/payment', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
-      // Get the signature from the headers
       const signature = req.headers['stripe-signature'] as string;
       
-      // Verify the signature
-      if (!paymentService.verifyWebhookSignature(req.body.toString(), signature)) {
-        console.error('⚠️ Webhook signature verification failed.');
-        return res.status(400).send('Webhook signature verification failed');
+      // The body is already a Buffer in raw middleware, so we don't need to toString() it yet
+      let event;
+      try {
+        event = stripe.webhooks.constructEvent(
+          req.body, 
+          signature, 
+          process.env.STRIPE_WEBHOOK_SECRET as string
+        );
+      } catch (err) {
+        console.error('⚠️ Webhook signature verification failed.', err);
+        return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}`);
       }
       
-      // Parse the event
-      const event = JSON.parse(req.body.toString()) as Stripe.Event;
-      console.log(`Webhook received: ${event.type}`);
+      console.log(`Webhook received and verified: ${event.type}`);
       
       // Handle the webhook event type
       if (event.type === 'checkout.session.completed') {
