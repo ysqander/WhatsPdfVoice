@@ -1,4 +1,5 @@
-import { ChatExport, Message, MediaFile } from "@shared/types";
+import { ChatExport, Message } from "@shared/types";
+import { MediaFile } from "@shared/schema";
 import {
     PDFDocument,
     StandardFonts,
@@ -242,24 +243,30 @@ async function generatePdfWithPdfLib(
                     chatData.id, // Pass chatId if needed for logging/context
                 );
             } else if (message.type === "image" && message.mediaUrl) {
-                contentEndY = drawMediaPlaceholder(
+                contentEndY = await drawMediaLink(
                     currentPage,
+                    pdfDoc,
                     message,
-                    "Image",
+                    mediaFilesMap.get(message.id!), // Pass potential MediaFile
                     timesRomanFont,
+                    timesRomanBoldFont,
                     contentX,
                     y,
-                    META_COLOR,
+                    LINK_COLOR,
+                    chatData.id, // Pass chatId if needed for logging/context
                 );
             } else if (message.type === "attachment" && message.mediaUrl) {
-                contentEndY = drawMediaPlaceholder(
+                contentEndY = await drawMediaLink(
                     currentPage,
+                    pdfDoc,
                     message,
-                    "File",
+                    mediaFilesMap.get(message.id!), // Pass potential MediaFile
                     timesRomanFont,
+                    timesRomanBoldFont,
                     contentX,
                     y,
-                    META_COLOR,
+                    LINK_COLOR,
+                    chatData.id, // Pass chatId if needed for logging/context
                 );
             } else {
                 // Handle unknown or unsupported types
@@ -681,6 +688,7 @@ function estimateLines(
 
 /**
  * Draws a placeholder for media messages (Image, Attachment).
+ * This function is kept for backward compatibility but new code should use drawMediaLink.
  */
 function drawMediaPlaceholder(
     page: PDFPage,
@@ -706,6 +714,145 @@ function drawMediaPlaceholder(
         lineHeight: CONTENT_LINE_HEIGHT,
     });
     return y - CONTENT_LINE_HEIGHT;
+}
+
+/**
+ * Draws a clickable link for media attachments (images, PDFs, and other files).
+ */
+async function drawMediaLink(
+    page: PDFPage,
+    pdfDoc: PDFDocument,
+    message: Message,
+    mediaFile: MediaFile | undefined, // Associated media file from DB/R2
+    textFont: PDFFont,
+    boldFont: PDFFont,
+    x: number,
+    y: number,
+    color: Color,
+    chatId?: number, // Optional: For context in logging
+): Promise<number> {
+    // Returns the Y position below the link
+    
+    // Determine the media type display label
+    let mediaTypeLabel = "File";
+    let icon = "📄";
+    
+    if (message.type === "image") {
+        mediaTypeLabel = "Image";
+        icon = "🖼️";
+    } else if (message.type === "attachment") {
+        // Check common file extensions for better labels
+        const ext = message.mediaUrl ? path.extname(message.mediaUrl).toLowerCase() : "";
+        if (ext === ".pdf") {
+            mediaTypeLabel = "PDF";
+            icon = "📄";
+        } else if ([".doc", ".docx"].includes(ext)) {
+            mediaTypeLabel = "Document";
+            icon = "📝";
+        } else if ([".xls", ".xlsx"].includes(ext)) {
+            mediaTypeLabel = "Spreadsheet";
+            icon = "📊";
+        } else if ([".zip", ".rar", ".7z"].includes(ext)) {
+            mediaTypeLabel = "Archive";
+            icon = "🗜️";
+        } else if ([".mp4", ".avi", ".mov"].includes(ext)) {
+            mediaTypeLabel = "Video";
+            icon = "🎬";
+        }
+    }
+    
+    const mediaFilename = message.mediaUrl
+        ? path.basename(message.mediaUrl)
+        : `attached_${mediaTypeLabel.toLowerCase()}`;
+    
+    // Non-unicode fallback icons if needed
+    const safeIcon = ""; // Use empty string as PDF may not support Unicode emojis
+    
+    // Compose link text
+    const linkText = `${safeIcon} View ${mediaTypeLabel}: ${mediaFilename}`;
+    const linkFontSize = 10;
+    const linkLineHeight = CONTENT_LINE_HEIGHT * 1.2; // Slightly more height for link
+
+    // --- Generate Target URL ---
+    let targetUrl = "";
+    // Determine base URL robustly
+    const appDomain = process.env.REPLIT_DOMAINS
+        ? process.env.REPLIT_DOMAINS.split(",")[0]
+        : null;
+    const appBaseUrl = appDomain
+        ? `https://${appDomain}`
+        : "http://localhost:5000"; // Default to localhost if not on Replit
+
+    if (mediaFile && mediaFile.id) {
+        // Use the proxy URL if we have the mediaFile ID
+        targetUrl = `${appBaseUrl}/api/media/proxy/${mediaFile.id}`;
+        console.log(
+            `PDF (Chat ${chatId || "N/A"}): Using proxy URL for ${message.type} message ${message.id || "N/A"} -> ${targetUrl}`,
+        );
+    } else if (message.mediaUrl) {
+        // Fallback: Use original URL, making it absolute if it's relative
+        if (message.mediaUrl.startsWith("/")) {
+            targetUrl = `${appBaseUrl}${message.mediaUrl}`;
+        } else {
+            targetUrl = message.mediaUrl; // Assume it's already absolute or handle other cases
+        }
+        console.warn(
+            `PDF (Chat ${chatId || "N/A"}): Using original/fallback URL for ${message.type} message ${message.id || "N/A"} -> ${targetUrl}`,
+        );
+    } else {
+        console.error(
+            `PDF (Chat ${chatId || "N/A"}): Cannot generate URL for ${message.type} message ${message.id || "N/A"} - No mediaUrl and no MediaFile found.`,
+        );
+        targetUrl = "#"; // Placeholder URL
+    }
+
+    // --- Draw Link Text ---
+    page.drawText(linkText, {
+        x: x,
+        y: y,
+        font: boldFont, // Make link text bold
+        size: linkFontSize,
+        color: color, // Use link-specific color
+        lineHeight: linkLineHeight,
+    });
+
+    // --- Create Clickable Link Annotation ---
+    if (targetUrl && targetUrl !== "#") {
+        const textWidth = boldFont.widthOfTextAtSize(linkText, linkFontSize);
+        const linkRectHeight = linkLineHeight * 0.8; // Make clickable area slightly shorter than line height
+
+        try {
+            const linkAnnotationRef = pdfDoc.context.register(
+                pdfDoc.context.obj({
+                    Type: PDFName.of("Annot"),
+                    Subtype: PDFName.of("Link"),
+                    Rect: [x, y, x + textWidth, y + linkRectHeight], // Simpler Rect based on text draw position
+                    Border: [0, 0, 0], // Underline style [horizontal_corner_radius, vertical_corner_radius, width]
+                    A: {
+                        Type: PDFName.of("Action"),
+                        S: PDFName.of("URI"),
+                        URI: PDFString.of(targetUrl), // Use the generated URL
+                    },
+                }),
+            );
+
+            // Add annotation to the page's annotations array
+            let annots = page.node.lookup(PDFName.of("Annots"), PDFArray);
+            if (!annots) {
+                annots = pdfDoc.context.obj([]);
+                page.node.set(PDFName.of("Annots"), annots);
+            }
+            annots.push(linkAnnotationRef);
+        } catch (linkError) {
+            console.error(
+                `PDF (Chat ${chatId || "N/A"}): Failed to create link annotation for ${message.type} message ${message.id || "N/A"}`,
+                linkError,
+            );
+            // Continue without the link if annotation fails
+        }
+    }
+
+    return y - linkLineHeight; // Return Y position below the link
 }
 
 /**
