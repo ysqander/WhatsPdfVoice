@@ -3,10 +3,13 @@ import Footer from "@/components/Footer";
 import ProcessSteps from "@/components/ProcessSteps";
 import UploadSection from "@/components/UploadSection";
 import PreviewSection from "@/components/PreviewSection";
-import { useState } from "react";
-import { ChatExport, ProcessingOptions } from "@shared/types";
+import PaymentRequired from "@/components/PaymentRequired";
+import { useState, useEffect } from "react";
+import { ChatExport, ProcessingOptions, ProcessingStep } from "@shared/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -17,6 +20,7 @@ export default function Home() {
     { done: false, text: "Parsing chat messages..." },
     { done: false, text: "Converting voice messages..." },
     { done: false, text: "Generating PDF document..." },
+    { done: false, text: "Payment required..." }
   ]);
   const [isFileProcessed, setIsFileProcessed] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -28,6 +32,48 @@ export default function Home() {
     includeImages: false,
     includeAttachments: false,
   });
+  
+  // Payment-related state
+  const [requiresPayment, setRequiresPayment] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
+  const [mediaSizeBytes, setMediaSizeBytes] = useState(0);
+  const [bundleId, setBundleId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<ProcessingStep | null>(null);
+  
+  // Check if we have success or cancelled params in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const cancelled = params.get('cancelled');
+    const bundleUrl = params.get('bundleUrl');
+    
+    if (success === 'true' && bundleUrl) {
+      toast({
+        title: "Payment Successful!",
+        description: "Thank you for your purchase. Your download is ready.",
+      });
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Set the PDF URL and mark as processed
+      setPdfUrl(decodeURIComponent(bundleUrl));
+      setIsFileProcessed(true);
+      setRequiresPayment(false);
+    }
+    
+    if (cancelled === 'true') {
+      toast({
+        variant: "destructive",
+        title: "Payment Cancelled",
+        description: "Your payment was cancelled. You can try again when ready.",
+      });
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const resetState = () => {
     setFile(null);

@@ -3,7 +3,12 @@ import { storage } from "../storage";
 import { MediaFile } from "@shared/schema";
 import { parse } from "../lib/parser";
 import { generatePdf } from "../lib/pdf";
-import { ProcessingOptions, ProcessingStep } from "@shared/types";
+import { 
+  ProcessingOptions, 
+  ProcessingStep, 
+  FREE_TIER_MESSAGE_LIMIT, 
+  FREE_TIER_MEDIA_SIZE_LIMIT 
+} from "@shared/types";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
@@ -12,6 +17,7 @@ import archiver from "archiver";
 import os from "os";
 import { format } from "date-fns";
 import { testR2Connection, getSignedR2Url } from "../lib/r2Storage";
+import { paymentService } from "../lib/paymentService";
 
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
@@ -114,8 +120,98 @@ export const uploadController = {
           chatData.originalFilename = req.file!.originalname;
           // Convert processing options to an object for storage
           chatData.processingOptions = options;
-
-          // Save chat export to storage
+          
+          // Analyze chat size to determine if payment is required
+          console.log(`Analyzing chat size. Messages: ${chatData.messages.length}`);
+          
+          // Get total size of media files
+          let totalMediaSize = 0;
+          const mediaMessages = chatData.messages.filter(msg => 
+            msg.type === 'voice' || msg.type === 'image' || msg.type === 'attachment'
+          );
+          
+          for (const message of mediaMessages) {
+            try {
+              if (!message.mediaUrl) continue;
+              
+              // Check if media file exists locally
+              let mediaPath = path.join(os.tmpdir(), 'whatspdf', 'media', path.basename(message.mediaUrl));
+              if (fs.existsSync(mediaPath)) {
+                const stats = fs.statSync(mediaPath);
+                totalMediaSize += stats.size;
+              }
+            } catch (error) {
+              console.error(`Error checking media file size: ${error}`);
+            }
+          }
+          
+          console.log(`Total media size: ${totalMediaSize} bytes (${(totalMediaSize / (1024 * 1024)).toFixed(2)}MB)`);
+          
+          // Check if payment is required
+          const requiresPayment = 
+            chatData.messages.length > FREE_TIER_MESSAGE_LIMIT || 
+            totalMediaSize > FREE_TIER_MEDIA_SIZE_LIMIT;
+            
+          if (requiresPayment) {
+            console.log(`Chat exceeds free tier limits. Payment required.`);
+            
+            // Save chat export to storage first to get its ID
+            const savedChatExport = await storage.saveChatExport(chatData);
+            chatData.id = savedChatExport.id;
+            
+            // Generate PDF for payment
+            console.log('Generating PDF for payment bundle');
+            const pdfResult = await generatePdf(chatData);
+            console.log('PDF generation completed for payment:', pdfResult);
+            
+            // Get PDF path
+            const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', path.basename(pdfResult));
+            
+            try {
+              // Create a payment bundle with temporary storage
+              const email = req.body.email; // Optional email from the client
+              const paymentBundle = await paymentService.createPaymentBundle(
+                savedChatExport,
+                pdfPath,
+                chatData.messages.length,
+                totalMediaSize,
+                email
+              );
+              
+              console.log('Created payment bundle:', {
+                bundleId: paymentBundle.id,
+                sessionId: paymentBundle.stripeSessionId
+              });
+              
+              // Update progress to payment required state
+              storage.saveProcessingProgress(clientId, 40, ProcessingStep.PAYMENT_REQUIRED);
+              
+              // Send payment required notification with bundle info
+              clients.get(clientId)?.write(`data: ${JSON.stringify({ 
+                progress: 40, 
+                step: ProcessingStep.PAYMENT_REQUIRED,
+                messageCount: chatData.messages.length,
+                mediaSizeBytes: totalMediaSize,
+                requiresPayment: true,
+                bundleId: paymentBundle.id,
+                checkoutUrl: paymentBundle.stripeSessionId
+              })}\n\n`);
+              
+              // Stop further processing - user needs to complete payment first
+              const clientRes = clients.get(clientId);
+              if (clientRes) {
+                clientRes.end();
+                clients.delete(clientId);
+              }
+              return;
+            } catch (error) {
+              console.error('Error creating payment bundle:', error);
+              // Continue processing if payment bundle creation fails
+              // We'll use the free tier in this case as a fallback
+            }
+          }
+          
+          // Save chat export to storage regardless of payment status
           const savedChatExport = await storage.saveChatExport(chatData);
 
           // Save messages to storage
