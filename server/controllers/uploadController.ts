@@ -665,16 +665,72 @@ export const uploadController = {
       // Get the latest chat export
       const chatExport = await storage.getLatestChatExport();
 
-      if (!chatExport || !chatExport.pdfUrl) {
-        return res.status(404).json({ message: "PDF not found" });
+      if (!chatExport) {
+        return res.status(404).json({ message: "Chat export not found" });
       }
 
-      // Extract file name from the URL
-      const pdfFileName = path.basename(chatExport.pdfUrl);
-      const pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
+      if (!chatExport.pdfUrl) {
+        // No PDF URL saved, try to find it in media files
+        const mediaFiles = await storage.getMediaFilesByChat(chatExport.id!);
+        console.log(`Found ${mediaFiles.length} media files for chat export ${chatExport.id}`);
+        
+        // First try to find the PDF by our special marker
+        let pdfFile = mediaFiles.find(file => 
+          file.originalName === 'MAIN_GENERATED_PDF' || 
+          (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+        );
+        
+        // Fallback to type if our marker isn't found
+        if (!pdfFile) {
+          pdfFile = mediaFiles.find(file => file.type === 'pdf');
+        }
+        
+        // If not found, try by content type as fallback
+        if (!pdfFile) {
+          pdfFile = mediaFiles.find(file => file.contentType === 'application/pdf');
+          if (pdfFile) {
+            console.log(`Found PDF by content type for download: ${pdfFile.id}`);
+          }
+        }
+        
+        if (pdfFile && pdfFile.url) {
+          // Save the URL to the chat export for future use
+          await storage.savePdfUrl(chatExport.id!, pdfFile.url);
+          chatExport.pdfUrl = pdfFile.url;
+          console.log(`Updated chat export with PDF URL: ${pdfFile.url}`);
+        } else {
+          return res.status(404).json({ message: "PDF file not found in media files" });
+        }
+      }
 
-      if (!fs.existsSync(pdfPath)) {
-        return res.status(404).json({ message: "PDF file not found" });
+      // Handle different storage locations
+      let pdfPath: string;
+      
+      if (chatExport.pdfUrl.startsWith('http')) {
+        // PDF is in R2, need to download it first
+        pdfPath = path.join(os.tmpdir(), 'whatspdf', 'temp', `downloaded_${Date.now()}.pdf`);
+        fs.mkdirSync(path.dirname(pdfPath), { recursive: true }); // Ensure directory exists
+        
+        try {
+          const pdfResponse = await fetch(chatExport.pdfUrl);
+          if (!pdfResponse.ok) {
+            throw new Error(`Failed to download PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+          }
+          const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+          fs.writeFileSync(pdfPath, Buffer.from(pdfArrayBuffer));
+          console.log('Downloaded PDF from R2 for direct download');
+        } catch (err) {
+          console.error('Error downloading PDF from R2:', err);
+          return res.status(500).json({ message: "Failed to download PDF from cloud storage" });
+        }
+      } else {
+        // PDF is in local storage
+        const pdfFileName = path.basename(chatExport.pdfUrl);
+        pdfPath = path.join(os.tmpdir(), 'whatspdf', 'pdfs', pdfFileName);
+        
+        if (!fs.existsSync(pdfPath)) {
+          return res.status(404).json({ message: "PDF file not found in local storage" });
+        }
       }
 
       // Set headers for download
@@ -738,7 +794,25 @@ export const uploadController = {
 
       if (chatExport.pdfUrl.startsWith('http')) {
         // PDF is in R2
-        const pdfFile = mediaFiles.find(file => file.type === 'pdf');
+        // First try to find the PDF by our special marker
+        let pdfFile = mediaFiles.find(file => 
+          file.originalName === 'MAIN_GENERATED_PDF' || 
+          (file.fileHash && file.fileHash.startsWith('MAIN_PDF_'))
+        );
+        
+        // Fallback to type if our marker isn't found
+        if (!pdfFile) {
+          pdfFile = mediaFiles.find(file => file.type === 'pdf');
+        }
+        
+        // If not found, try by content type as fallback
+        if (!pdfFile) {
+          pdfFile = mediaFiles.find(file => file.contentType === 'application/pdf');
+          if (pdfFile) {
+            console.log(`Found PDF by content type for evidence package: ${pdfFile.id}`);
+          }
+        }
+        
         if (pdfFile) {
           pdfPath = path.join(tempDir, 'Chat_Transcript.pdf');
 
