@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -8,6 +8,8 @@ import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { uploadController } from "./controllers/uploadController";
 import mediaRouter from "./mediaRouter";
+import Stripe from "stripe";
+import { paymentService } from "./lib/paymentService";
 
 // Setup temporary upload directory
 const tempDir = path.join(os.tmpdir(), 'whatspdf-uploads');
@@ -172,6 +174,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to delete media file',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Initialize Stripe
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.warn('STRIPE_SECRET_KEY is not set. Payment features will not work properly.');
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2023-10-16' as any,
+  });
+
+  // Webhook signing secret - would come from Stripe dashboard in production
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  // Checkout routes
+  app.post('/api/checkout/:bundleId', async (req, res) => {
+    try {
+      const { bundleId } = req.params;
+      const { email } = req.body;
+      
+      // Get bundle from database
+      const bundle = await paymentService.getBundleById(bundleId);
+      if (!bundle) {
+        return res.status(404).json({ error: 'Bundle not found' });
+      }
+      
+      // Get Stripe checkout session
+      const session = await stripe.checkout.sessions.retrieve(bundle.stripeSessionId);
+      
+      // Return checkout session URL
+      res.json({ 
+        success: true, 
+        checkoutUrl: session.url
+      });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ 
+        error: 'Error creating checkout session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Stripe Webhook endpoint - use a middleware that preserves the raw body
+  app.post('/webhook/payment', (req, res, next) => {
+    let data = '';
+    req.on('data', chunk => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      req.rawBody = data;
+      next();
+    });
+  }, async (req: any, res) => {
+    try {
+      // Verify webhook signature if secret is available
+      let event: Stripe.Event;
+      
+      if (webhookSecret) {
+        const signature = req.headers['stripe-signature'] as string;
+        try {
+          event = stripe.webhooks.constructEvent(
+            req.rawBody,
+            signature,
+            webhookSecret
+          );
+        } catch (err) {
+          console.error(`⚠️ Webhook signature verification failed.`, err);
+          return res.status(400).send('Webhook signature verification failed');
+        }
+      } else {
+        // If no webhook secret is configured, use the event as-is (less secure)
+        event = req.body as Stripe.Event;
+      }
+      
+      // Handle the webhook event
+      const success = await paymentService.handleWebhookEvent(event);
+      
+      if (success) {
+        res.json({ received: true });
+      } else {
+        res.status(400).json({ error: 'Failed to process webhook' });
+      }
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      res.status(500).json({ 
+        error: 'Error handling webhook',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Payment success page
+  app.get('/payment-success', async (req, res) => {
+    try {
+      const sessionId = req.query.session_id as string;
+      
+      if (!sessionId) {
+        return res.status(400).send('No session ID provided');
+      }
+      
+      // Get bundle by session ID
+      const bundle = await paymentService.getBundleBySessionId(sessionId);
+      
+      if (!bundle) {
+        return res.status(404).send('Bundle not found');
+      }
+      
+      // Get signed URL
+      const url = await paymentService.getSignedBundleUrl(bundle);
+      
+      // Redirect to client success page with bundle URL
+      res.redirect(`/?success=true&bundleUrl=${encodeURIComponent(url)}`);
+    } catch (error) {
+      console.error('Error handling payment success:', error);
+      res.status(500).send('Error processing payment');
+    }
+  });
+  
+  // Payment cancelled page
+  app.get('/payment-cancelled', (_req, res) => {
+    res.redirect('/?cancelled=true');
+  });
+  
+  // Get bundle status and download link if paid
+  app.get('/api/bundle/:bundleId', async (req, res) => {
+    try {
+      const { bundleId } = req.params;
+      
+      // Get bundle
+      const bundle = await paymentService.getBundleById(bundleId);
+      
+      if (!bundle) {
+        return res.status(404).json({ error: 'Bundle not found' });
+      }
+      
+      // Get signed URL if bundle is paid
+      let downloadUrl = null;
+      if (bundle.isPaid) {
+        downloadUrl = await paymentService.getSignedBundleUrl(bundle);
+      }
+      
+      res.json({
+        bundleId: bundle.id,
+        isPaid: bundle.isPaid,
+        messageCount: bundle.messageCount,
+        mediaSizeBytes: bundle.mediaSizeBytes,
+        downloadUrl
+      });
+    } catch (error) {
+      console.error('Error getting bundle:', error);
+      res.status(500).json({ error: 'Error getting bundle' });
     }
   });
 
