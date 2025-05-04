@@ -240,10 +240,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.type === 'checkout.session.completed') {
         // Handle the checkout.session.completed event
         const session = event.data.object as Stripe.Checkout.Session;
+        
+        console.log('Processing checkout session:', {
+          sessionId: session.id,
+          bundleId: session.client_reference_id,
+          customerId: session.customer,
+          paymentStatus: session.payment_status
+        });
+        
         const bundle = await paymentService.handleCheckoutSessionCompleted(session.id);
         
         if (bundle) {
           console.log(`Payment succeeded for bundle ${bundle.bundleId}`);
+          
+          // Get the PDF URL from the bundle's chat export
+          // In a real implementation, this would also move the PDF from temporary storage
+          // to a more permanent location with a longer expiry time
+          
+          console.log(`Bundle marked as paid, valid for 30 days`);
+          
           res.json({ received: true });
         } else {
           console.error('Bundle not found or payment failed');
@@ -303,11 +318,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Bundle not found' });
       }
       
+      // Check if chat export exists in database
+      const chatExportId = bundle.chatExportId;
+      const isPaid = bundle.paidAt !== null;
+      let pdfUrl = null;
+      
+      if (isPaid && chatExportId) {
+        try {
+          // Get chat export to obtain the PDF URL
+          const chatExport = await storage.getChatExport(chatExportId);
+          if (chatExport && chatExport.pdfUrl) {
+            pdfUrl = chatExport.pdfUrl;
+          }
+        } catch (err) {
+          console.error('Error retrieving chat export for paid bundle:', err);
+        }
+      }
+      
       res.json({
         bundleId: bundle.bundleId,
-        isPaid: bundle.paidAt !== null,
+        isPaid,
         messageCount: bundle.messageCount,
-        mediaSizeBytes: bundle.mediaSizeBytes
+        mediaSizeBytes: bundle.mediaSizeBytes,
+        pdfUrl,
+        paidAt: bundle.paidAt,
+        expiresAt: bundle.expiresAt
       });
     } catch (error) {
       console.error('Error getting bundle:', error);
