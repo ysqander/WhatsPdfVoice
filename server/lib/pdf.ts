@@ -88,17 +88,28 @@ async function generatePdfWithPdfLib(
     // const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica); // Example alternative
 
     // --- Fetch Media File Data (Crucial for Proxy Links) ---
-    let mediaFilesMap = new Map<number, MediaFile>(); // Map messageId -> MediaFile
+    let mediaFilesMap = new Map<string, MediaFile>(); // Map ID string -> MediaFile
     if (chatData.id) {
         try {
             const mediaFiles = await storage.getMediaFilesByChat(chatData.id);
+            console.log(`PDF: Retrieved ${mediaFiles.length} media files from storage`);
+            
+            // Store media files both by messageId and by their own id for complete access
             mediaFiles.forEach((file) => {
                 if (file.messageId) {
-                    mediaFilesMap.set(file.messageId, file);
+                    // Convert message ID to string to avoid any numeric conversion issues
+                    const messageIdStr = String(file.messageId);
+                    mediaFilesMap.set(messageIdStr, file);
+                }
+                
+                // Always store by the file's own ID for the summary page
+                if (file.id) {
+                    mediaFilesMap.set(file.id, file);
                 }
             });
+            
             console.log(
-                `PDF: Fetched ${mediaFilesMap.size} media file records for chat ${chatData.id}`,
+                `PDF: Mapped ${mediaFilesMap.size} media file records for chat ${chatData.id}`,
             );
         } catch (error) {
             console.error(
@@ -230,11 +241,15 @@ async function generatePdfWithPdfLib(
                 );
                 contentEndY = finalY;
             } else if (message.type === "voice" && message.mediaUrl) {
+                // Convert message ID to string for consistent lookup - it could be undefined or numeric
+                const messageIdStr = message.id ? String(message.id) : undefined;
+                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                
                 contentEndY = await drawVoiceMessageLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFilesMap.get(message.id!), // Pass potential MediaFile
+                    mediaFile, // Pass potential MediaFile
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
@@ -243,11 +258,15 @@ async function generatePdfWithPdfLib(
                     chatData.id, // Pass chatId if needed for logging/context
                 );
             } else if (message.type === "image" && message.mediaUrl) {
+                // Convert message ID to string for consistent lookup
+                const messageIdStr = message.id ? String(message.id) : undefined;
+                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFilesMap.get(message.id!), // Pass potential MediaFile
+                    mediaFile, // Pass potential MediaFile
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
@@ -256,11 +275,15 @@ async function generatePdfWithPdfLib(
                     chatData.id, // Pass chatId if needed for logging/context
                 );
             } else if (message.type === "attachment" && message.mediaUrl) {
+                // Convert message ID to string for consistent lookup
+                const messageIdStr = message.id ? String(message.id) : undefined;
+                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFilesMap.get(message.id!), // Pass potential MediaFile
+                    mediaFile, // Pass potential MediaFile
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
