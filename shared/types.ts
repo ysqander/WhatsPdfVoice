@@ -44,3 +44,17 @@ export enum ProcessingStep {
   CONVERT_VOICE = 2,
   GENERATE_PDF = 3
 }
+
+// MediaFile interface (copy from schema.ts for direct import)
+export interface MediaFile {
+  id: string;
+  key: string;
+  chatExportId?: number;
+  messageId?: number;
+  originalName?: string;
+  contentType: string;
+  size?: number;
+  uploadedAt?: string;
+  url?: string;
+  type?: 'voice' | 'image' | 'attachment' | 'pdf';
+}

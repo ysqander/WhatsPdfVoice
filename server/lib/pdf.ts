@@ -1,5 +1,4 @@
-import { ChatExport, Message } from "@shared/types";
-import { MediaFile } from "@shared/schema";
+import { ChatExport, Message, MediaFile } from "@shared/types";
 import {
     PDFDocument,
     StandardFonts,
@@ -304,9 +303,9 @@ async function generatePdfWithPdfLib(
         fs.writeFileSync(pdfPath, pdfBytes);
         console.log("PDF file written successfully to:", pdfPath);
         console.log("PDF details:", { pdfId, size: pdfBytes.length });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error writing PDF file:", error);
-        throw new Error(`Failed to write PDF file: ${error.message}`);
+        throw new Error(`Failed to write PDF file: ${error.message || String(error)}`);
     }
 
     return { pdfPath, pdfId };
