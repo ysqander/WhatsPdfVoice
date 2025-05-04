@@ -156,6 +156,13 @@ export default function Home() {
                       description: "Your payment was successful and your download is ready.",
                     });
                     
+                    // Also clear pending checkout data
+                    localStorage.removeItem('whats_pdf_checkout_started');
+                    localStorage.removeItem('whats_pdf_bundle_id');
+                    
+                    // Clear URL parameters
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
                     return; // Skip the retry since we fixed it
                   } else {
                     console.warn('Repair response OK but no PDF URL returned:', repairData);
@@ -249,6 +256,23 @@ export default function Home() {
               setIsFileProcessed(true);
               setRequiresPayment(false);
               
+              // Try to fetch chat data for preview
+              if (data.chatExportId) {
+                try {
+                  console.log(`Fetching chat data for chat export ${data.chatExportId}`);
+                  const chatResponse = await fetch(`/api/whatsapp/chat/${data.chatExportId}`);
+                  if (chatResponse.ok) {
+                    const chatData = await chatResponse.json();
+                    console.log(`Chat data fetched successfully with ${chatData.messages?.length} messages`);
+                    setChatData(chatData);
+                  } else {
+                    console.error(`Failed to fetch chat data for pending resume, status: ${chatResponse.status}`);
+                  }
+                } catch (chatError) {
+                  console.error('Error fetching chat data for pending resume:', chatError);
+                }
+              }
+              
               toast({
                 title: "Download Ready",
                 description: "Your payment was successful and your download is ready.",
@@ -257,6 +281,9 @@ export default function Home() {
               // Clear pending checkout
               localStorage.removeItem('whats_pdf_checkout_started');
               localStorage.removeItem('whats_pdf_bundle_id');
+              
+              // Clear URL parameters
+              window.history.replaceState({}, document.title, window.location.pathname);
             } else {
               // Try the repair endpoint
               const repairResponse = await fetch(`/api/payment/${storedBundleId}/repair`, {
@@ -273,6 +300,23 @@ export default function Home() {
                   setPdfUrl(repairData.pdfUrl);
                   setIsFileProcessed(true);
                   setRequiresPayment(false);
+                  
+                  // Try to fetch chat data for preview
+                  if (repairData.chatExportId) {
+                    try {
+                      console.log(`Fetching chat data for chat export ${repairData.chatExportId}`);
+                      const chatResponse = await fetch(`/api/whatsapp/chat/${repairData.chatExportId}`);
+                      if (chatResponse.ok) {
+                        const chatData = await chatResponse.json();
+                        console.log(`Chat data fetched successfully with ${chatData.messages?.length} messages`);
+                        setChatData(chatData);
+                      } else {
+                        console.error(`Failed to fetch chat data, status: ${chatResponse.status}`);
+                      }
+                    } catch (chatError) {
+                      console.error('Error fetching chat data:', chatError);
+                    }
+                  }
                   
                   // Clear pending checkout
                   localStorage.removeItem('whats_pdf_checkout_started');

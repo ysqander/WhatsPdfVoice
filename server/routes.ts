@@ -578,6 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         bundleId: bundle.bundleId,
+        chatExportId: bundle.chatExportId, // Include chatExportId in response
         isPaid,
         messageCount: bundle.messageCount || 0,
         mediaSizeBytes: bundle.mediaSizeBytes || 0,
@@ -628,7 +629,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ 
           success: true, 
           message: 'PDF URL already exists',
-          pdfUrl: chatExport.pdfUrl 
+          pdfUrl: chatExport.pdfUrl,
+          chatExportId: bundle.chatExportId 
         });
       }
       
@@ -677,7 +679,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         success: true,
         message: 'PDF URL repaired successfully',
-        pdfUrl
+        pdfUrl,
+        chatExportId: bundle.chatExportId // Include the chatExportId
       });
     } catch (error) {
       console.error('Error repairing PDF URL:', error);
