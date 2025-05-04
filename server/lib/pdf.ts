@@ -52,8 +52,8 @@ async function generatePdfWithPdfLib(
   const { width, height } = page.getSize();
   const margin = 50;
 
-  // Add header
-  page.drawText("CHAT TRANSCRIPT EVIDENCE", {
+  // Add header - simplified as requested
+  page.drawText("WhatsApp Conversation Transcript", {
     x: width / 2 - 120,
     y: height - margin,
     size: 16,
@@ -61,34 +61,10 @@ async function generatePdfWithPdfLib(
     color: primaryColor,
   });
 
-  page.drawText("WhatsApp Conversation", {
-    x: width / 2 - 80,
-    y: height - margin - 20,
-    size: 14,
-    font: timesRomanFont,
-    color: secondaryColor,
-  });
-
-  // Add metadata
-  page.drawText(`Case Reference: WA-${format(new Date(), "yyyyMMdd-HHmm")}`, {
-    x: margin,
-    y: height - margin - 50,
-    size: 10,
-    font: timesRomanFont,
-    color: textColor,
-  });
-
+  // Add minimal metadata - only generated date and participants
   page.drawText(`Generated On: ${format(new Date(), "dd MMM yyyy, HH:mm")}`, {
     x: margin,
-    y: height - margin - 65,
-    size: 10,
-    font: timesRomanFont,
-    color: textColor,
-  });
-
-  page.drawText(`File SHA-256: ${chatData.fileHash.substring(0, 10)}...`, {
-    x: width - margin - 200,
-    y: height - margin - 50,
+    y: height - margin - 40,
     size: 10,
     font: timesRomanFont,
     color: textColor,
@@ -97,8 +73,8 @@ async function generatePdfWithPdfLib(
   page.drawText(
     `Participants: ${chatData.participants?.join(", ") || "Unknown"}`,
     {
-      x: width - margin - 200,
-      y: height - margin - 65,
+      x: margin,
+      y: height - margin - 55,
       size: 10,
       font: timesRomanFont,
       color: textColor,
@@ -236,9 +212,9 @@ async function generatePdfWithPdfLib(
         y = lineY - 20;
       } else if (message.type === "voice") {
         if (message.mediaUrl) {
-          const playText = "> Play Voice Message";
+          const playText = "▶ Play Voice Message";
           
-          // Draw the link text
+          // Draw the link text with improved styling
           currentPage.drawText(playText, {
             x: margin + 20,
             y,
@@ -323,22 +299,17 @@ async function generatePdfWithPdfLib(
             );
           }
 
-          // Add reference text for evidence ZIP that references our permanent proxy URL
-          let referenceText = "(See voice note via proxy)";
-          
-          // If we have a media file ID, add that as a reference
-          if (proxyUrl.includes('/api/media/proxy/')) {
-            const mediaId = proxyUrl.split('/').pop();
-            referenceText = `(Voice ID: ${mediaId})`;
+          // For the duration text
+          if (message.duration) {
+            const formattedDuration = formatDuration(message.duration);
+            currentPage.drawText(`Duration: ${formattedDuration}`, {
+              x: margin + 20,
+              y: y - 15,
+              size: 8,
+              font: timesRomanFont,
+              color: rgb(0.5, 0.5, 0.5),
+            });
           }
-          
-          currentPage.drawText(referenceText, {
-            x: margin + 20,
-            y: y - 15,
-            size: 8,
-            font: timesRomanFont,
-            color: rgb(0.5, 0.5, 0.5),
-          });
         } else {
           // Fallback for voice messages without a media URL
           currentPage.drawText("[Voice Message]", {
@@ -478,6 +449,7 @@ function generateHTML(chatData: ChatExport): string {
           margin: 0;
           padding: 0;
           color: #333333;
+          line-height: 1.5;
         }
 
         .container {
@@ -489,22 +461,15 @@ function generateHTML(chatData: ChatExport): string {
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 2px solid #f0f0f0;
+          border-bottom: 2px solid #3498DB;
           padding-bottom: 20px;
         }
 
         .header h1 {
-          font-size: 20px;
+          font-size: 24px;
           color: #2C3E50;
-          margin: 0 0 5px;
-          text-transform: uppercase;
-        }
-
-        .header h2 {
-          font-size: 18px;
-          color: #34495E;
           margin: 0 0 20px;
-          font-weight: normal;
+          font-weight: 600;
         }
 
         .metadata {
@@ -560,22 +525,25 @@ function generateHTML(chatData: ChatExport): string {
         }
 
         .message-bubble {
-          padding: 10px;
-          border-radius: 10px;
+          padding: 12px;
+          border-radius: 12px;
           margin-left: 20px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .sender-1-bubble {
           background-color: #f0f0f0;
+          border-left: 3px solid #2C3E50;
         }
 
         .sender-2-bubble {
           background-color: #e6f3ff;
+          border-left: 3px solid #3498DB;
         }
 
         .message-content {
           font-size: 14px;
-          line-height: 1.4;
+          line-height: 1.5;
           white-space: pre-wrap;
         }
 
@@ -633,12 +601,9 @@ function generateHTML(chatData: ChatExport): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>CHAT TRANSCRIPT EVIDENCE</h1>
-          <h2>WhatsApp Conversation</h2>
+          <h1>WhatsApp Conversation Transcript</h1>
 
           <div class="metadata">
-            <p><span class="label">Case Reference:</span> WA-${format(new Date(), "yyyyMMdd-HHmm")}</p>
-            <p><span class="label">File SHA-256:</span> ${chatData.fileHash.substring(0, 10)}...</p>
             <p><span class="label">Generated On:</span> ${format(new Date(), "dd MMM yyyy, HH:mm")}</p>
             <p><span class="label">Participants:</span> ${chatData.participants?.join(", ") || "Unknown"}</p>
           </div>
