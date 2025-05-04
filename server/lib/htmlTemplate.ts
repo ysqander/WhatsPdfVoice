@@ -45,6 +45,7 @@ export function generateHTML(chatData: ChatExport): string {
           margin: 0;
           padding: 0;
           color: #333333;
+          line-height: 1.5;
         }
         
         .container {
@@ -56,22 +57,15 @@ export function generateHTML(chatData: ChatExport): string {
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 2px solid #f0f0f0;
+          border-bottom: 2px solid #3498DB;
           padding-bottom: 20px;
         }
         
         .header h1 {
-          font-size: 20px;
+          font-size: 24px;
           color: #2C3E50;
-          margin: 0 0 5px;
-          text-transform: uppercase;
-        }
-        
-        .header h2 {
-          font-size: 18px;
-          color: #34495E;
           margin: 0 0 20px;
-          font-weight: normal;
+          font-weight: 600;
         }
         
         .metadata {
@@ -127,17 +121,20 @@ export function generateHTML(chatData: ChatExport): string {
         }
         
         .message-bubble {
-          padding: 10px;
-          border-radius: 10px;
+          padding: 12px;
+          border-radius: 12px;
           margin-left: 20px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
         .sender-1-bubble {
           background-color: #f0f0f0;
+          border-left: 3px solid #2C3E50;
         }
         
         .sender-2-bubble {
           background-color: #e6f3ff;
+          border-left: 3px solid #3498DB;
         }
         
         .message-content {
@@ -177,12 +174,9 @@ export function generateHTML(chatData: ChatExport): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>CHAT TRANSCRIPT EVIDENCE</h1>
-          <h2>WhatsApp Conversation</h2>
+          <h1>WhatsApp Conversation Transcript</h1>
           
           <div class="metadata">
-            <p><span class="label">Case Reference:</span> WA-${format(new Date(), "yyyyMMdd-HHmm")}</p>
-            <p><span class="label">File SHA-256:</span> ${chatData.fileHash.substring(0, 10)}...</p>
             <p><span class="label">Generated On:</span> ${format(new Date(), "dd MMM yyyy, HH:mm")}</p>
             <p><span class="label">Participants:</span> ${chatData.participants?.join(", ") || "Unknown"}</p>
           </div>
@@ -223,7 +217,7 @@ export function generateHTML(chatData: ChatExport): string {
         html += `
           <div class="message-content">
             <a href="${message.mediaUrl}" class="voice-link" target="_blank">
-              <span class="voice-link-icon">▶</span>
+              <span class="voice-link-icon">&gt;</span>
               Play Voice Message
             </a>
             <div class="duration-info">
