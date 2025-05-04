@@ -632,9 +632,19 @@ async function generatePdfWithPdfLib(
             
             // Add SHA-256 hash on the next line with some indentation
             const hashLabel = "SHA-256: ";
-            // Generate a placeholder hash for now - in production this would come from the MediaFile object
-            // or be calculated from the file content
-            const fileHash = file.fileHash || `sha256-${file.id.substring(0, 6)}`;
+            
+            // Calculate hash for the file
+            let fileHash = "Not available offline. See manifest.json in the evidence package.";
+            
+            // If we have a hash already in the file object, use it
+            if (file.fileHash) {
+                fileHash = file.fileHash;
+            } else {
+                // When file has a proper key, we could access it in the future to calculate the hash
+                if (file.key && file.key.includes('/')) {
+                    fileHash = `[Available in evidence package manifest.json]`;
+                }
+            }
             
             summaryPage.drawText(hashLabel, {
                 x: MARGIN + 20, // Indent the hash line

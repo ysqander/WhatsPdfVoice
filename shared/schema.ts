@@ -79,4 +79,5 @@ export type MediaFile = {
   uploadedAt?: string;
   url?: string;
   type?: 'voice' | 'image' | 'attachment' | 'pdf';
+  fileHash?: string; // SHA-256 hash for legal authentication
 };
