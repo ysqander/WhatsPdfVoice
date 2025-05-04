@@ -284,8 +284,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Payment succeeded for bundle ${bundle.bundleId}`);
           
           // Get the PDF URL from the bundle's chat export
-          // In a real implementation, this would also move the PDF from temporary storage
-          // to a more permanent location with a longer expiry time
+          if (bundle.chatExportId) {
+            try {
+              // Get the chat export to access its PDF URL
+              const chatExport = await storage.getChatExport(bundle.chatExportId);
+              if (chatExport && chatExport.pdfUrl) {
+                console.log(`Retrieved PDF URL for paid bundle: ${chatExport.pdfUrl}`);
+              } else {
+                console.warn(`Chat export found but no PDF URL available for bundle ${bundle.bundleId}`);
+              }
+            } catch (err) {
+              console.error(`Error retrieving chat export for paid bundle ${bundle.bundleId}:`, err);
+            }
+          } else {
+            console.warn(`No chatExportId found for paid bundle ${bundle.bundleId}`);
+          }
           
           console.log(`Bundle marked as paid, valid for 30 days`);
           
@@ -316,11 +329,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send('No session ID provided');
       }
       
+      console.log(`Processing success redirect for session: ${sessionId}`);
+      
       // Process the completed session
       const bundle = await paymentService.handleCheckoutSessionCompleted(sessionId);
       
       if (!bundle) {
+        console.error(`No bundle found for session ${sessionId}`);
         return res.status(404).send('Bundle not found or payment could not be processed');
+      }
+      
+      console.log(`Success redirect for bundle: ${bundle.bundleId}, chatExportId: ${bundle.chatExportId}`);
+      
+      // If we have a chat export ID, verify that we can actually get the PDF URL
+      if (bundle.chatExportId) {
+        try {
+          const chatExport = await storage.getChatExport(bundle.chatExportId);
+          if (chatExport && chatExport.pdfUrl) {
+            console.log(`PDF URL for paid bundle ${bundle.bundleId}: ${chatExport.pdfUrl}`);
+          } else {
+            console.warn(`No PDF URL found for chat export ${bundle.chatExportId}`);
+          }
+        } catch (err) {
+          console.error(`Error getting chat export for bundle ${bundle.bundleId}:`, err);
+        }
       }
       
       // Redirect to client success page
