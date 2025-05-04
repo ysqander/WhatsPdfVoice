@@ -18,6 +18,7 @@ import os from "os";
 import { format } from "date-fns";
 import { testR2Connection, getSignedR2Url } from "../lib/r2Storage";
 import { paymentService } from "../lib/paymentService";
+import { isPaymentRequired, calculateMediaSize, handlePaymentCheck } from "../lib/paymentHelper";
 
 // Map to store client connections for SSE
 const clients = new Map<string, Response>();
