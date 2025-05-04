@@ -1,0 +1,57 @@
+PDF DEBUG] generatePdfWithPdfLib called for chatData.id: 1
+[PDF DEBUG] Attempting storage.getMediaFilesByChat with ID: 1
+[PDF DEBUG] storage.getMediaFilesByChat returned 10 files.
+[PDF DEBUG] First media file sample: ID=b030b4af-b2d3-4553-a8d3-80365bcfee44, type=voice, messageId=3, chatExportId=1
+PDF: Media file 1/10: ID=b030b4af-b2d3-4553-a8d3-80365bcfee44, type=voice, messageId=3
+PDF: Media file 2/10: ID=68e4c4ee-0b7f-4e65-985a-af6257b09010, type=voice, messageId=7
+PDF: Media file 3/10: ID=d7ce3d17-3f91-4145-aa68-d0d98cce65df, type=voice, messageId=9
+PDF: Media file 4/10: ID=ae089290-16a4-4a79-a8b6-97be41cd2d74, type=voice, messageId=11
+PDF: Media file 5/10: ID=08eddee0-2c21-4bdd-a592-ccb474a88d12, type=voice, messageId=13
+PDF: Media file 6/10: ID=e8a8e043-aec3-466e-a24e-ea603dfbbd9f, type=voice, messageId=14
+PDF: Media file 7/10: ID=378b9320-5a6e-4e8a-b6c0-673d807185ea, type=voice, messageId=15
+PDF: Media file 8/10: ID=779c69fe-74a9-43f9-8bf2-f24400e0674d, type=voice, messageId=17
+PDF: Media file 9/10: ID=a70c1012-b012-4df2-95bf-89f4623accf9, type=image, messageId=19
+PDF: Media file 10/10: ID=edfb7a8c-5502-4773-b5da-843398e5cc9a, type=attachment, messageId=22
+PDF: Mapped messageId 3 to file b030b4af-b2d3-4553-a8d3-80365bcfee44
+PDF: Mapped messageId 7 to file 68e4c4ee-0b7f-4e65-985a-af6257b09010
+PDF: Mapped messageId 9 to file d7ce3d17-3f91-4145-aa68-d0d98cce65df
+PDF: Mapped messageId 11 to file ae089290-16a4-4a79-a8b6-97be41cd2d74
+PDF: Mapped messageId 13 to file 08eddee0-2c21-4bdd-a592-ccb474a88d12
+PDF: Mapped messageId 14 to file e8a8e043-aec3-466e-a24e-ea603dfbbd9f
+PDF: Mapped messageId 15 to file 378b9320-5a6e-4e8a-b6c0-673d807185ea
+PDF: Mapped messageId 17 to file 779c69fe-74a9-43f9-8bf2-f24400e0674d
+PDF: Mapped messageId 19 to file a70c1012-b012-4df2-95bf-89f4623accf9
+PDF: Mapped messageId 22 to file edfb7a8c-5502-4773-b5da-843398e5cc9a
+PDF: Mapped 20 media file records (10 by message ID) for chat 1
+PDF: Found media file b030b4af-b2d3-4553-a8d3-80365bcfee44 for voice message 3
+PDF (Chat 1): Using proxy URL for message 3 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/b030b4af-b2d3-4553-a8d3-80365bcfee44
+PDF: Found media file 68e4c4ee-0b7f-4e65-985a-af6257b09010 for voice message 7
+PDF (Chat 1): Using proxy URL for message 7 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/68e4c4ee-0b7f-4e65-985a-af6257b09010
+PDF: Found media file d7ce3d17-3f91-4145-aa68-d0d98cce65df for voice message 9
+PDF (Chat 1): Using proxy URL for message 9 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/d7ce3d17-3f91-4145-aa68-d0d98cce65df
+PDF: Found media file 779c69fe-74a9-43f9-8bf2-f24400e0674d for voice message 17
+PDF (Chat 1): Using proxy URL for message 17 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/779c69fe-74a9-43f9-8bf2-f24400e0674d
+PDF: Found media file ae089290-16a4-4a79-a8b6-97be41cd2d74 for voice message 11
+PDF (Chat 1): Using proxy URL for message 11 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/ae089290-16a4-4a79-a8b6-97be41cd2d74
+PDF: Found media file 08eddee0-2c21-4bdd-a592-ccb474a88d12 for voice message 13
+PDF (Chat 1): Using proxy URL for message 13 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/08eddee0-2c21-4bdd-a592-ccb474a88d12
+PDF: Found media file e8a8e043-aec3-466e-a24e-ea603dfbbd9f for voice message 14
+PDF (Chat 1): Using proxy URL for message 14 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/e8a8e043-aec3-466e-a24e-ea603dfbbd9f
+PDF: Found media file 378b9320-5a6e-4e8a-b6c0-673d807185ea for voice message 15
+PDF (Chat 1): Using proxy URL for message 15 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/378b9320-5a6e-4e8a-b6c0-673d807185ea
+PDF: Found media file a70c1012-b012-4df2-95bf-89f4623accf9 for image message 19
+PDF (Chat 1): Using proxy URL for image message 19 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/a70c1012-b012-4df2-95bf-89f4623accf9
+PDF: Found media file edfb7a8c-5502-4773-b5da-843398e5cc9a for attachment message 22
+PDF (Chat 1): Using proxy URL for attachment message 22 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/edfb7a8c-5502-4773-b5da-843398e5cc9a
+Error processing file: Error: WinAnsi cannot encode "" (0x1f44d)
+    at Encoding.encodeUnicodeCodePoint (/home/runner/workspace/node_modules/@pdf-lib/standard-fonts/lib/Encoding.js:23:23)
+    at StandardFontEmbedder.StandardFontEmbedder.encodeTextAsGlyphs (/home/runner/workspace/node_modules/pdf-lib/src/core/embedders/StandardFontEmbedder.ts:124:35)
+    at StandardFontEmbedder.StandardFontEmbedder.widthOfTextAtSize (/home/runner/workspace/node_modules/pdf-lib/src/core/embedders/StandardFontEmbedder.ts:59:25)
+    at PDFFont.PDFFont.widthOfTextAtSize (/home/runner/workspace/node_modules/pdf-lib/src/api/PDFFont.ts:89:26)
+    at estimateLines (/home/runner/workspace/server/lib/pdf.ts:1102:40)
+    at estimateMessageHeight (/home/runner/workspace/server/lib/pdf.ts:1048:23)
+    at generatePdfWithPdfLib (/home/runner/workspace/server/lib/pdf.ts:232:37)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async generatePdf (/home/runner/workspace/server/lib/pdf.ts:64:25)
+    at async <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:349:29)
+3:07:09 PM [express] GET /api/whatsapp/process-status 200 in 5218ms

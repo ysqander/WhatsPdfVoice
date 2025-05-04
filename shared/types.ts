@@ -13,7 +13,7 @@ export interface Message {
   timestamp: string;
   sender: string;
   content: string;
-  type: 'text' | 'voice' | 'image' | 'attachment';
+  type: "text" | "voice" | "image" | "attachment";
   mediaUrl?: string;
   duration?: number;
   chatExportId?: number;
@@ -43,11 +43,11 @@ export enum ProcessingStep {
   PARSE_MESSAGES = 1,
   CONVERT_VOICE = 2,
   GENERATE_PDF = 3,
-  PAYMENT_REQUIRED = 4
+  PAYMENT_REQUIRED = 4,
 }
 
 // Constants for free tier limits
-export const FREE_TIER_MESSAGE_LIMIT = 150;
+export const FREE_TIER_MESSAGE_LIMIT = 50;
 export const FREE_TIER_MEDIA_SIZE_LIMIT = 20 * 1024 * 1024; // 20MB in bytes
 
 // MediaFile interface (copy from schema.ts for direct import)
@@ -61,6 +61,6 @@ export interface MediaFile {
   size?: number;
   uploadedAt?: string;
   url?: string;
-  type?: 'voice' | 'image' | 'attachment' | 'pdf';
+  type?: "voice" | "image" | "attachment" | "pdf";
   fileHash?: string; // SHA-256 hash for legal authentication
 }
