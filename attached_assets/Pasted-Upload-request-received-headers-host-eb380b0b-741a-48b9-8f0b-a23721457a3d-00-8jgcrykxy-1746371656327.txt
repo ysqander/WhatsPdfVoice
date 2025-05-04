@@ -1,0 +1,305 @@
+Upload request received: {
+  headers: {
+    host: 'eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'content-length': '438412',
+    accept: '*/*',
+    'accept-encoding': 'gzip, deflate, br, zstd',
+    'accept-language': 'en-GB,en;q=0.8',
+    'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary1kwRO1YjaAEQGlyJ',
+    cookie: '__stripe_mid=e9a76655-bc8c-4716-9b97-1ae2ea13c1efee7b8c; __stripe_sid=d6b762cb-d10b-428b-876f-432dd597f634c4f1b6',
+    origin: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    referer: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/',
+    'sec-ch-ua': '"Brave";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'x-forwarded-for': '45.155.143.100, 10.83.5.103',
+    'x-forwarded-proto': 'https',
+    'x-replit-user-bio': '',
+    'x-replit-user-id': '',
+    'x-replit-user-name': '',
+    'x-replit-user-profile-image': '',
+    'x-replit-user-roles': '',
+    'x-replit-user-teams': '',
+    'x-replit-user-url': ''
+  },
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundary1kwRO1YjaAEQGlyJ',
+  files: undefined,
+  file: {
+    fieldname: 'file',
+    originalname: 'WhatsApp Chat - more than 50 messages.zip',
+    encoding: '7bit',
+    mimetype: 'application/zip',
+    destination: '/tmp/whatspdf-uploads',
+    filename: 'file-1746371561059-78f380ce-556e-40a7-8d3e-b217500cb442.zip',
+    path: '/tmp/whatspdf-uploads/file-1746371561059-78f380ce-556e-40a7-8d3e-b217500cb442.zip',
+    size: 437973
+  },
+  body: [Object: null prototype] {
+    options: '{"includeVoiceMessages":true,"includeTimestamps":true,"highlightSenders":true,"includeImages":true,"includeAttachments":true}'
+  }
+}
+File details: {
+  originalname: 'WhatsApp Chat - more than 50 messages.zip',
+  mimetype: 'application/zip',
+  size: 437973,
+  path: '/tmp/whatspdf-uploads/file-1746371561059-78f380ce-556e-40a7-8d3e-b217500cb442.zip'
+}
+Waiting for SSE connection for clientId: fec8124a-b0b8-4e14-8a5f-aae3bb1fc00a
+3:12:41 PM [express] POST /api/whatsapp/process 200 in 466ms :: {"clientId":"fec8124a-b0b8-4e14-8a5f…
+Starting background processing for clientId: fec8124a-b0b8-4e14-8a5f-aae3bb1fc00a
+Starting parse for file: /tmp/whatspdf-uploads/file-1746371561059-78f380ce-556e-40a7-8d3e-b217500cb442.zip
+Looking for attachment: -0000007-AUDIO-2025-05-01-18-28-48.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Looking for attachment: -0000003-AUDIO-2025-05-01-18-31-00.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Looking for attachment: -0000001-AUDIO-2025-05-01-18-32-10.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Looking for attachment: 00000002-AUDIO-2025-05-04-10-29-03.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000002-AUDIO-2025-05-04-10-29-03.opus
+Looking for attachment: 00000004-AUDIO-2025-05-04-10-29-35.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000004-AUDIO-2025-05-04-10-29-35.opus
+Looking for attachment: 00000005-AUDIO-2025-05-04-10-29-50.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000005-AUDIO-2025-05-04-10-29-50.opus
+Looking for attachment: 00000006-AUDIO-2025-05-04-10-30-08.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000006-AUDIO-2025-05-04-10-30-08.opus
+Looking for attachment: 00000008-AUDIO-2025-05-04-10-28-20.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000008-AUDIO-2025-05-04-10-28-20.opus
+Looking for attachment: 00000010-PHOTO-2025-05-04-10-53-14.jpg in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Looking for attachment: 00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Found attachment: /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8/WhatsApp Chat - more than 50 messages/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Looking for attachment: 00000014-AUDIO-2025-05-04-11-16-48.opus in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Attachment not found: 00000014-AUDIO-2025-05-04-11-16-48.opus
+Looking for attachment: 00000015-PHOTO-2025-05-06-10-20-35.jpg in /tmp/whatspdf-temp/171a2867-3536-461f-81e3-6e2c5b6b64e8
+Attachment not found: 00000015-PHOTO-2025-05-06-10-20-35.jpg
+Parsed chat export: {
+  messageCount: 85,
+  participantCount: 2,
+  firstMessageSample: {
+    timestamp: '2025-05-01T18:27:34',
+    sender: 'Iris Adamov',
+    content: 'Hi Alex, there’s mold coming back in the corner of the bedroom again. Can you please arrange for someone to look at it?',
+    type: 'text',
+    mediaUrl: undefined,
+    duration: undefined
+  },
+  options: {
+    includeVoiceMessages: true,
+    includeTimestamps: true,
+    highlightSenders: true,
+    includeImages: true,
+    includeAttachments: true
+  }
+}
+Parse completed successfully
+Analyzing chat size. Messages: 85
+Total media size: 428236 bytes (0.41MB)
+Chat exceeds free tier limits. Payment required.
+Generating PDF for payment bundle
+Starting PDF generation with pdf-lib...
+[PDF DEBUG] generatePdfWithPdfLib called for chatData.id: 3
+[PDF DEBUG] Attempting storage.getMediaFilesByChat with ID: 3
+[PDF DEBUG] storage.getMediaFilesByChat returned 0 files.
+PDF: Mapped 0 media file records (0 by message ID) for chat 3
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/-0000007-AUDIO-2025-05-01-18-28-48.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/-0000003-AUDIO-2025-05-01-18-31-00.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/-0000001-AUDIO-2025-05-01-18-32-10.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000008-AUDIO-2025-05-04-10-28-20.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000002-AUDIO-2025-05-04-10-29-03.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000004-AUDIO-2025-05-04-10-29-35.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000005-AUDIO-2025-05-04-10-29-50.opus
+PDF: No media file found for voice message undefined
+PDF (Chat 3): Using original/fallback URL for message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000006-AUDIO-2025-05-04-10-30-08.opus
+PDF: No media file found for image message undefined
+PDF (Chat 3): Using original/fallback URL for image message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000010-PHOTO-2025-05-04-10-53-14.jpg
+PDF: No media file found for attachment message undefined
+PDF (Chat 3): Using original/fallback URL for attachment message N/A -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/media/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+PDF: Media files map size: 0
+PDF: Media files array length: 0
+PDF: Unique media files count: 0
+[PDF DEBUG] Summary Page: displayMediaFiles count: 0
+[PDF DEBUG] Summary Page: displayMediaFiles is empty. mediaFilesMap size was 0. uniqueMediaFiles size was 0
+PDF: No media files to display in summary table
+Saving PDF document...
+PDF file written successfully to: /tmp/whatspdf/pdfs/0023adf4-af53-4ac7-b61b-960eaa3b9d5a.pdf
+PDF details: { pdfId: '0023adf4-af53-4ac7-b61b-960eaa3b9d5a', size: 11978 }
+PDF generation completed for payment: /tmp/whatspdf/pdfs/0023adf4-af53-4ac7-b61b-960eaa3b9d5a.pdf
+Error creating payment bundle: error: column "bundle_id" of relation "payment_bundles" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async PaymentService.createPaymentBundle (/home/runner/workspace/server/lib/paymentService.ts:32:20)
+    at async <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:171:30) {
+  length: 137,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '38',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_target.c',
+  line: '1066',
+  routine: 'checkInsertTargets'
+}
+R2 connection successful
+R2 connection successful, proceeding with media uploads
+Found 10 media messages to upload to R2
+Processing 8 voice messages
+Trying alternate media path: /tmp/whatspdf/media/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Uploading voice message to R2: /tmp/whatspdf/media/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Uploaded file to R2: chats/4/voice/_0000007_audio_2025_05_01_18_28_48_dc5acde2-7e67-4be2-bffe-97f0cd408503.opus
+Uploaded media file to R2: chats/4/voice/_0000007_audio_2025_05_01_18_28_48_dc5acde2-7e67-4be2-bffe-97f0cd408503.opus
+Setting message 65 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/f74ea984-90b4-4704-87c1-dbeffdaecbc6
+Uploaded voice message to R2, key: chats/4/voice/_0000007_audio_2025_05_01_18_28_48_dc5acde2-7e67-4be2-bffe-97f0cd408503.opus
+Trying alternate media path: /tmp/whatspdf/media/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Uploading voice message to R2: /tmp/whatspdf/media/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Uploaded file to R2: chats/4/voice/_0000003_audio_2025_05_01_18_31_00_f26d3bea-cb77-4e04-955a-c294ba3c67fb.opus
+Uploaded media file to R2: chats/4/voice/_0000003_audio_2025_05_01_18_31_00_f26d3bea-cb77-4e04-955a-c294ba3c67fb.opus
+Setting message 69 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/bcb48988-3b7d-4e83-9531-f09f8aa16057
+Uploaded voice message to R2, key: chats/4/voice/_0000003_audio_2025_05_01_18_31_00_f26d3bea-cb77-4e04-955a-c294ba3c67fb.opus
+Trying alternate media path: /tmp/whatspdf/media/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Uploading voice message to R2: /tmp/whatspdf/media/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Uploaded file to R2: chats/4/voice/_0000001_audio_2025_05_01_18_32_10_06a91c92-d7f4-445c-93d1-2a0e4bee1a2c.opus
+Uploaded media file to R2: chats/4/voice/_0000001_audio_2025_05_01_18_32_10_06a91c92-d7f4-445c-93d1-2a0e4bee1a2c.opus
+Setting message 71 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f
+Uploaded voice message to R2, key: chats/4/voice/_0000001_audio_2025_05_01_18_32_10_06a91c92-d7f4-445c-93d1-2a0e4bee1a2c.opus
+Trying alternate media path: /tmp/whatspdf/media/00000008-AUDIO-2025-05-04-10-28-20.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000008-AUDIO-2025-05-04-10-28-20.opus
+Uploaded file to R2: chats/4/voice/00000008_audio_2025_05_04_10_28_20_033ab460-121b-4fa6-ba9a-8ca68ebc013a.opus
+Uploaded media file to R2: chats/4/voice/00000008_audio_2025_05_04_10_28_20_033ab460-121b-4fa6-ba9a-8ca68ebc013a.opus
+Setting message 72 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/ce1f3bb7-1765-4e44-b3c9-8ee58600eae1
+Uploaded voice message to R2, key: chats/4/voice/00000008_audio_2025_05_04_10_28_20_033ab460-121b-4fa6-ba9a-8ca68ebc013a.opus
+Trying alternate media path: /tmp/whatspdf/media/00000002-AUDIO-2025-05-04-10-29-03.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000002-AUDIO-2025-05-04-10-29-03.opus
+Uploaded file to R2: chats/4/voice/00000002_audio_2025_05_04_10_29_03_370aee7b-4639-43f2-a4c4-158f3e003e72.opus
+Uploaded media file to R2: chats/4/voice/00000002_audio_2025_05_04_10_29_03_370aee7b-4639-43f2-a4c4-158f3e003e72.opus
+Setting message 75 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/6a45174d-b577-4680-a397-c7469795df14
+Uploaded voice message to R2, key: chats/4/voice/00000002_audio_2025_05_04_10_29_03_370aee7b-4639-43f2-a4c4-158f3e003e72.opus
+Trying alternate media path: /tmp/whatspdf/media/00000004-AUDIO-2025-05-04-10-29-35.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000004-AUDIO-2025-05-04-10-29-35.opus
+Uploaded file to R2: chats/4/voice/00000004_audio_2025_05_04_10_29_35_5cb41eef-368e-4daf-856a-e9ac471b59aa.opus
+Uploaded media file to R2: chats/4/voice/00000004_audio_2025_05_04_10_29_35_5cb41eef-368e-4daf-856a-e9ac471b59aa.opus
+Setting message 77 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/73c6ffd9-746b-4e92-a886-6f08e576d2fc
+Uploaded voice message to R2, key: chats/4/voice/00000004_audio_2025_05_04_10_29_35_5cb41eef-368e-4daf-856a-e9ac471b59aa.opus
+Trying alternate media path: /tmp/whatspdf/media/00000005-AUDIO-2025-05-04-10-29-50.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000005-AUDIO-2025-05-04-10-29-50.opus
+Uploaded file to R2: chats/4/voice/00000005_audio_2025_05_04_10_29_50_1c3f180b-aa39-4324-bf58-3c241e1f9049.opus
+Uploaded media file to R2: chats/4/voice/00000005_audio_2025_05_04_10_29_50_1c3f180b-aa39-4324-bf58-3c241e1f9049.opus
+Setting message 78 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/0642f385-f128-483e-aa4e-97e43437d77a
+Uploaded voice message to R2, key: chats/4/voice/00000005_audio_2025_05_04_10_29_50_1c3f180b-aa39-4324-bf58-3c241e1f9049.opus
+Trying alternate media path: /tmp/whatspdf/media/00000006-AUDIO-2025-05-04-10-30-08.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000006-AUDIO-2025-05-04-10-30-08.opus
+Uploaded file to R2: chats/4/voice/00000006_audio_2025_05_04_10_30_08_904d8337-69c6-4c6e-9349-780753d44be5.opus
+Uploaded media file to R2: chats/4/voice/00000006_audio_2025_05_04_10_30_08_904d8337-69c6-4c6e-9349-780753d44be5.opus
+Setting message 79 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/a1b482ae-3961-4f71-83c7-395375ad8945
+Uploaded voice message to R2, key: chats/4/voice/00000006_audio_2025_05_04_10_30_08_904d8337-69c6-4c6e-9349-780753d44be5.opus
+Processing 2 other media messages
+Trying alternate media path: /tmp/whatspdf/media/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Uploading image to R2: /tmp/whatspdf/media/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Uploaded file to R2: chats/4/image/00000010_photo_2025_05_04_10_53_14_e4af6c6b-36b0-410b-890b-706db31c9e72.jpg
+Uploaded media file to R2: chats/4/image/00000010_photo_2025_05_04_10_53_14_e4af6c6b-36b0-410b-890b-706db31c9e72.jpg
+Setting message 81 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/88216569-35b1-4be0-85cb-71563815fc1d
+Uploaded image to R2, key: chats/4/image/00000010_photo_2025_05_04_10_53_14_e4af6c6b-36b0-410b-890b-706db31c9e72.jpg
+Trying alternate media path: /tmp/whatspdf/media/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Uploading attachment to R2: /tmp/whatspdf/media/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Uploaded file to R2: chats/4/attachment/00000013_a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127_f564_48fd_8187_6cb13bdb0c4c_bdaf6462-b53a-4852-bcb9-9e774c3bda16.pdf
+Uploaded media file to R2: chats/4/attachment/00000013_a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127_f564_48fd_8187_6cb13bdb0c4c_bdaf6462-b53a-4852-bcb9-9e774c3bda16.pdf
+Setting message 84 media URL to proxy: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/24c21900-7e6c-4d7b-a464-7b63480df0b3
+Uploaded attachment to R2, key: chats/4/attachment/00000013_a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127_f564_48fd_8187_6cb13bdb0c4c_bdaf6462-b53a-4852-bcb9-9e774c3bda16.pdf
+Starting PDF generation for chat export: 4
+Starting PDF generation with pdf-lib...
+[PDF DEBUG] generatePdfWithPdfLib called for chatData.id: 4
+[PDF DEBUG] Attempting storage.getMediaFilesByChat with ID: 4
+[PDF DEBUG] storage.getMediaFilesByChat returned 10 files.
+[PDF DEBUG] First media file sample: ID=f74ea984-90b4-4704-87c1-dbeffdaecbc6, type=voice, messageId=65, chatExportId=4
+PDF: Media file 1/10: ID=f74ea984-90b4-4704-87c1-dbeffdaecbc6, type=voice, messageId=65
+PDF: Media file 2/10: ID=bcb48988-3b7d-4e83-9531-f09f8aa16057, type=voice, messageId=69
+PDF: Media file 3/10: ID=dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f, type=voice, messageId=71
+PDF: Media file 4/10: ID=ce1f3bb7-1765-4e44-b3c9-8ee58600eae1, type=voice, messageId=72
+PDF: Media file 5/10: ID=6a45174d-b577-4680-a397-c7469795df14, type=voice, messageId=75
+PDF: Media file 6/10: ID=73c6ffd9-746b-4e92-a886-6f08e576d2fc, type=voice, messageId=77
+PDF: Media file 7/10: ID=0642f385-f128-483e-aa4e-97e43437d77a, type=voice, messageId=78
+PDF: Media file 8/10: ID=a1b482ae-3961-4f71-83c7-395375ad8945, type=voice, messageId=79
+PDF: Media file 9/10: ID=88216569-35b1-4be0-85cb-71563815fc1d, type=image, messageId=81
+PDF: Media file 10/10: ID=24c21900-7e6c-4d7b-a464-7b63480df0b3, type=attachment, messageId=84
+PDF: Mapped messageId 65 to file f74ea984-90b4-4704-87c1-dbeffdaecbc6
+PDF: Mapped messageId 69 to file bcb48988-3b7d-4e83-9531-f09f8aa16057
+PDF: Mapped messageId 71 to file dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f
+PDF: Mapped messageId 72 to file ce1f3bb7-1765-4e44-b3c9-8ee58600eae1
+PDF: Mapped messageId 75 to file 6a45174d-b577-4680-a397-c7469795df14
+PDF: Mapped messageId 77 to file 73c6ffd9-746b-4e92-a886-6f08e576d2fc
+PDF: Mapped messageId 78 to file 0642f385-f128-483e-aa4e-97e43437d77a
+PDF: Mapped messageId 79 to file a1b482ae-3961-4f71-83c7-395375ad8945
+PDF: Mapped messageId 81 to file 88216569-35b1-4be0-85cb-71563815fc1d
+PDF: Mapped messageId 84 to file 24c21900-7e6c-4d7b-a464-7b63480df0b3
+PDF: Mapped 20 media file records (10 by message ID) for chat 4
+PDF: Found media file f74ea984-90b4-4704-87c1-dbeffdaecbc6 for voice message 65
+PDF (Chat 4): Using proxy URL for message 65 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/f74ea984-90b4-4704-87c1-dbeffdaecbc6
+PDF: Found media file bcb48988-3b7d-4e83-9531-f09f8aa16057 for voice message 69
+PDF (Chat 4): Using proxy URL for message 69 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/bcb48988-3b7d-4e83-9531-f09f8aa16057
+PDF: Found media file dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f for voice message 71
+PDF (Chat 4): Using proxy URL for message 71 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f
+PDF: Found media file ce1f3bb7-1765-4e44-b3c9-8ee58600eae1 for voice message 72
+PDF (Chat 4): Using proxy URL for message 72 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/ce1f3bb7-1765-4e44-b3c9-8ee58600eae1
+PDF: Found media file 6a45174d-b577-4680-a397-c7469795df14 for voice message 75
+PDF (Chat 4): Using proxy URL for message 75 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/6a45174d-b577-4680-a397-c7469795df14
+PDF: Found media file 73c6ffd9-746b-4e92-a886-6f08e576d2fc for voice message 77
+PDF (Chat 4): Using proxy URL for message 77 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/73c6ffd9-746b-4e92-a886-6f08e576d2fc
+PDF: Found media file 0642f385-f128-483e-aa4e-97e43437d77a for voice message 78
+PDF (Chat 4): Using proxy URL for message 78 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/0642f385-f128-483e-aa4e-97e43437d77a
+PDF: Found media file a1b482ae-3961-4f71-83c7-395375ad8945 for voice message 79
+PDF (Chat 4): Using proxy URL for message 79 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/a1b482ae-3961-4f71-83c7-395375ad8945
+PDF: Found media file 88216569-35b1-4be0-85cb-71563815fc1d for image message 81
+PDF (Chat 4): Using proxy URL for image message 81 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/88216569-35b1-4be0-85cb-71563815fc1d
+PDF: Found media file 24c21900-7e6c-4d7b-a464-7b63480df0b3 for attachment message 84
+PDF (Chat 4): Using proxy URL for attachment message 84 -> https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/24c21900-7e6c-4d7b-a464-7b63480df0b3
+PDF: Media files map size: 20
+PDF: Media files array length: 20
+PDF: Unique media files count: 10
+[PDF DEBUG] Summary Page: displayMediaFiles count: 10
+[PDF DEBUG] Summary Page: First display file sample: ID=f74ea984-90b4-4704-87c1-dbeffdaecbc6, Name=-0000007-AUDIO-2025-05-01-18-28-48.opus, Type=voice
+PDF: Displaying 10 media files in summary table
+PDF: Using calculated SHA-256 hash for f74ea984-90b4-4704-87c1-dbeffdaecbc6: 5d4f3c9f...
+PDF: Using calculated SHA-256 hash for bcb48988-3b7d-4e83-9531-f09f8aa16057: 16257612...
+PDF: Using calculated SHA-256 hash for dfeeeab0-6d0c-4ad4-bd1e-76a5598d384f: 1adddc64...
+PDF: Using calculated SHA-256 hash for ce1f3bb7-1765-4e44-b3c9-8ee58600eae1: 0a9b16ab...
+PDF: Using calculated SHA-256 hash for 6a45174d-b577-4680-a397-c7469795df14: c5b41078...
+PDF: Using calculated SHA-256 hash for 73c6ffd9-746b-4e92-a886-6f08e576d2fc: ac73832d...
+PDF: Using calculated SHA-256 hash for 0642f385-f128-483e-aa4e-97e43437d77a: 88823369...
+PDF: Using calculated SHA-256 hash for a1b482ae-3961-4f71-83c7-395375ad8945: acf4d0d9...
+PDF: Using calculated SHA-256 hash for 88216569-35b1-4be0-85cb-71563815fc1d: 9125427f...
+PDF: Using calculated SHA-256 hash for 24c21900-7e6c-4d7b-a464-7b63480df0b3: 84b8d5b2...
+Saving PDF document...
+PDF file written successfully to: /tmp/whatspdf/pdfs/990c19e0-4221-4030-817a-4def1c01eaad.pdf
+PDF details: { pdfId: '990c19e0-4221-4030-817a-4def1c01eaad', size: 14461 }
+PDF generation completed: /tmp/whatspdf/pdfs/990c19e0-4221-4030-817a-4def1c01eaad.pdf
+Uploaded file to R2: chats/4/pdf/990c19e0_4221_4030_817a_4def1c01eaad_a393f8b6-d14c-4091-a890-0ad757992a33.pdf
+Uploaded media file to R2: chats/4/pdf/990c19e0_4221_4030_817a_4def1c01eaad_a393f8b6-d14c-4091-a890-0ad757992a33.pdf
+Uploaded PDF to R2: chats/4/pdf/990c19e0_4221_4030_817a_4def1c01eaad_a393f8b6-d14c-4091-a890-0ad757992a33.pdf
+Generated proxy URL for PDF: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/254ec2cb-aadd-47bf-bdd6-f5e16b1b7b45
+Generated PDF URL: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/254ec2cb-aadd-47bf-bdd6-f5e16b1b7b45
+PDF URL saved to storage for chat export: 4
+3:12:48 PM [express] GET /api/whatsapp/process-status 200 in 6509ms
+Media proxy request received for ID: 254ec2cb-aadd-47bf-bdd6-f5e16b1b7b45
+Found media proxy record, R2 key: chats/4/pdf/990c19e0_4221_4030_817a_4def1c01eaad_a393f8b6-d14c-4091-a890-0ad757992a33.pdf
+Redirecting to R2 URL
+3:12:48 PM [express] GET /api/media/proxy/254ec2cb-aadd-47bf-bdd6-f5e16b1b7b45 302 in 52ms

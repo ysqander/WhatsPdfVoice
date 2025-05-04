@@ -47,7 +47,7 @@ export enum ProcessingStep {
 }
 
 // Constants for free tier limits
-export const FREE_TIER_MESSAGE_LIMIT = 50;
+export const FREE_TIER_MESSAGE_LIMIT = 50; // Limit of free messages before payment required
 export const FREE_TIER_MEDIA_SIZE_LIMIT = 20 * 1024 * 1024; // 20MB in bytes
 
 // MediaFile interface (copy from schema.ts for direct import)

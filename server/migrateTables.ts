@@ -25,6 +25,7 @@ async function migrateDatabase() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS "payment_bundles" (
         "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        "bundle_id" TEXT NOT NULL UNIQUE,
         "chat_export_id" INTEGER,
         "r2_temp_key" TEXT,
         "r2_final_key" TEXT,
