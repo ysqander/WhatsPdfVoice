@@ -4,8 +4,23 @@ import { setupVite, serveStatic, log } from "./vite";
 import { migrateDatabase } from "./migrateTables";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Don't use the JSON middleware for the webhook path to preserve the raw body
+app.use((req, res, next) => {
+  if (req.originalUrl === '/webhook/payment') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
+app.use((req, res, next) => {
+  if (req.originalUrl === '/webhook/payment') {
+    next();
+  } else {
+    express.urlencoded({ extended: false })(req, res, next);
+  }
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

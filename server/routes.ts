@@ -220,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Stripe Webhook endpoint - use a middleware that preserves the raw body
+  // Stripe Webhook endpoint - must be raw for signature verification
   app.post('/webhook/payment', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       // Log important info for debugging
@@ -230,6 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (!req.headers['stripe-signature']) {
+        console.error('Stripe signature header is missing');
         return res.status(400).send('Stripe signature header is missing');
       }
       
@@ -244,20 +245,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the event
       let event;
       try {
-        // Make sure req.body is a Buffer - express.raw middleware should handle this
-        const payload = req.body;
-        
-        if (!payload) {
-          throw new Error('No request body received');
+        console.log('Webhook raw body received:', !!req.body, typeof req.body);
+        // The request body should be a Buffer at this point
+        if (!Buffer.isBuffer(req.body)) {
+          console.error('Request body is not a Buffer as expected');
         }
         
-        console.log('Request body type:', typeof payload, payload instanceof Buffer);
-        
+        // Construct the event from the raw body
         event = stripe.webhooks.constructEvent(
-          payload, 
-          signature, 
+          req.body,
+          signature,
           webhookSecret
         );
+        
+        console.log('Event construction successful:', event.type);
       } catch (err) {
         console.error('⚠️ Webhook signature verification failed:', err);
         return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}`);
