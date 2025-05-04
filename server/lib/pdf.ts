@@ -221,8 +221,8 @@ async function generatePdfWithPdfLib(
             y = height - margin;
           }
 
-          // Add extra vertical spacing before voice messages - REDUCED SPACING HERE
-          y -= 8; //Reduced from 15
+          // Add extra vertical spacing before voice messages
+          y -= 20;
 
           // Create button-like appearance with a box around the text
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
