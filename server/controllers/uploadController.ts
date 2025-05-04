@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { storage, MediaFile } from "../storage";
+import { storage } from "../storage";
+import { MediaFile } from "@shared/schema";
 import { parse } from "../lib/parser";
 import { generatePdf } from "../lib/pdf";
 import { ProcessingOptions, ProcessingStep } from "@shared/types";
@@ -111,8 +112,8 @@ export const uploadController = {
           console.log('Parse completed successfully');
           chatData.fileHash = fileHash;
           chatData.originalFilename = req.file!.originalname;
-          // Convert processing options to string for storage
-          chatData.processingOptions = JSON.stringify(options);
+          // Convert processing options to an object for storage
+          chatData.processingOptions = options;
 
           // Save chat export to storage
           const savedChatExport = await storage.saveChatExport(chatData);

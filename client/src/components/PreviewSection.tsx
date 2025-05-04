@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, SquareMinus, SearchCode, Download } from "lucide-react";
+import { SquareMinus, SearchCode, Download, Archive, FileDown } from "lucide-react";
 import PDFPreview from "./PDFPreview";
 import { ChatExport } from "@shared/types";
 import { Button } from "./ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "./ui/dropdown-menu";
 
 interface PreviewSectionProps {
   chatData: ChatExport | null;
@@ -37,6 +43,14 @@ export default function PreviewSection({
 
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 10, 50));
+  };
+
+  const handleDownloadOfflinePackage = () => {
+    // Only proceed if we have a chat ID
+    if (chatData?.id) {
+      // Open the evidence zip download URL in a new tab
+      window.open(`/api/whatsapp/evidence-zip/${chatData.id}`, '_blank');
+    }
   };
 
   return (
@@ -81,15 +95,28 @@ export default function PreviewSection({
           </div>
 
           {isFileProcessed && pdfUrl && (
-            <div>
+            <div className="flex gap-2">
+              {/* PDF Download button */}
               <Button
                 variant="outline"
                 size="sm"
                 className="text-xs"
                 onClick={() => window.open(pdfUrl, '_blank')}
               >
-                <Download className="mr-1 h-3 w-3" />
-                Download PDF
+                <FileDown className="mr-1 h-3 w-3" />
+                View PDF
+              </Button>
+              
+              {/* Evidence Package Download button */}
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs"
+                onClick={handleDownloadOfflinePackage}
+                disabled={!chatData?.id}
+              >
+                <Archive className="mr-1 h-3 w-3" />
+                Download Evidence Package
               </Button>
             </div>
           )}
