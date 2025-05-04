@@ -134,20 +134,59 @@ export class PaymentService {
    */
   async handleCheckoutSessionCompleted(sessionId: string): Promise<PaymentBundle | undefined> {
     try {
+      console.log(`Retrieving Stripe session ${sessionId}`);
+      
       // Retrieve the session
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       
-      // Get the bundle ID from the session metadata
-      const bundleId = session.metadata?.bundleId;
+      console.log(`Session retrieved, payment_status=${session.payment_status}, customer=${session.customer}`);
+      
+      // Get the bundle ID from metadata or client_reference_id
+      let bundleId = session.metadata?.bundleId;
+      
+      // If not in metadata, try client_reference_id (older sessions may use this)
+      if (!bundleId && session.client_reference_id) {
+        bundleId = session.client_reference_id;
+        console.log(`Using client_reference_id for bundleId: ${bundleId}`);
+      }
+      
       if (!bundleId) {
-        console.error('No bundleId found in session metadata', session);
+        console.error('No bundleId found in session metadata or client_reference_id', {
+          sessionId: session.id,
+          metadata: session.metadata,
+          clientReferenceId: session.client_reference_id
+        });
         return undefined;
       }
       
+      console.log(`Marking bundle ${bundleId} as paid`);
+      
+      // Check if bundle exists before marking as paid
+      const existingBundle = await this.getPaymentBundle(bundleId);
+      if (!existingBundle) {
+        console.error(`Bundle ${bundleId} not found in database`);
+        return undefined;
+      }
+      
+      console.log(`Existing bundle found: chatExportId=${existingBundle.chatExportId}, paidAt=${existingBundle.paidAt}`);
+      
+      // If already paid, just return the bundle
+      if (existingBundle.paidAt) {
+        console.log(`Bundle ${bundleId} already marked as paid at ${existingBundle.paidAt}`);
+        return existingBundle;
+      }
+      
       // Mark the bundle as paid
-      return this.markBundleAsPaid(bundleId);
+      const updatedBundle = await this.markBundleAsPaid(bundleId);
+      
+      console.log(`Bundle ${bundleId} marked as paid successfully:`, {
+        paidAt: updatedBundle?.paidAt,
+        expiresAt: updatedBundle?.expiresAt
+      });
+      
+      return updatedBundle;
     } catch (error) {
-      console.error('Error handling checkout session completed', error);
+      console.error('Error handling checkout session completed:', error);
       return undefined;
     }
   }

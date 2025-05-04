@@ -61,27 +61,51 @@ export default function Home() {
       // Fetch payment status and download URL
       const fetchPaymentDetails = async () => {
         try {
+          console.log(`Fetching payment details for bundle ${bundleId}`);
           const response = await fetch(`/api/payment/${bundleId}`);
           
           if (!response.ok) {
+            console.error(`Failed to fetch payment details, status: ${response.status}`);
             throw new Error('Failed to fetch payment details');
           }
           
           const data = await response.json();
+          console.log(`Payment details retrieved:`, data);
           
           if (data.isPaid) {
+            // Set bundle data for reference
+            setBundleId(data.bundleId);
+            setMessageCount(data.messageCount);
+            setMediaSizeBytes(data.mediaSizeBytes);
+            
             // Set the PDF URL and mark as processed
             if (data.pdfUrl) {
+              console.log(`PDF URL found: ${data.pdfUrl}`);
               setPdfUrl(data.pdfUrl);
               setIsFileProcessed(true);
               setRequiresPayment(false);
             } else {
+              console.error('Payment success but no PDF URL available');
+              
+              // Set a retry timer to check again in 3 seconds
+              setTimeout(() => {
+                console.log('Retrying payment details fetch');
+                fetchPaymentDetails();
+              }, 3000);
+              
               toast({
-                variant: "destructive",
-                title: "Download Error",
-                description: "Payment was successful, but download is not yet available. Please try again shortly.",
+                title: "Processing Payment",
+                description: "Your payment was successful. Preparing your download...",
               });
             }
+          } else {
+            console.warn('Bundle exists but is not marked as paid yet');
+            
+            // Set a retry timer in case the payment is being processed
+            setTimeout(() => {
+              console.log('Retrying payment status check');
+              fetchPaymentDetails();
+            }, 3000);
           }
         } catch (error) {
           console.error('Error fetching payment details:', error);
