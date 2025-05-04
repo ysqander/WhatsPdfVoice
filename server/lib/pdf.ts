@@ -89,27 +89,41 @@ async function generatePdfWithPdfLib(
 
     // --- Fetch Media File Data (Crucial for Proxy Links) ---
     let mediaFilesMap = new Map<string, MediaFile>(); // Map ID string -> MediaFile
+    let messageToMediaMap = new Map<string, MediaFile>(); // Map to help find files by message ID
+    
     if (chatData.id) {
         try {
             const mediaFiles = await storage.getMediaFilesByChat(chatData.id);
-            console.log(`PDF: Retrieved ${mediaFiles.length} media files from storage`);
+            console.log(`PDF: Retrieved ${mediaFiles.length} media files from storage for chat ${chatData.id}`);
+            
+            // First log all media files for debugging
+            mediaFiles.forEach((file, index) => {
+                console.log(`PDF: Media file ${index + 1}/${mediaFiles.length}: ID=${file.id}, type=${file.type}, messageId=${file.messageId}`);
+            });
             
             // Store media files both by messageId and by their own id for complete access
+            // Also maintain a separate map strictly by message ID
             mediaFiles.forEach((file) => {
-                if (file.messageId) {
-                    // Convert message ID to string to avoid any numeric conversion issues
-                    const messageIdStr = String(file.messageId);
-                    mediaFilesMap.set(messageIdStr, file);
-                }
-                
-                // Always store by the file's own ID for the summary page
+                // Always store by the file's own ID 
                 if (file.id) {
                     mediaFilesMap.set(file.id, file);
+                }
+                
+                // Also store by message ID (if present) in both maps
+                if (file.messageId !== undefined && file.messageId !== null) {
+                    // Store in main map with messageId as string key
+                    const messageIdStr = String(file.messageId);
+                    mediaFilesMap.set(`msg_${messageIdStr}`, file);
+                    
+                    // Store in dedicated message->media lookup map
+                    messageToMediaMap.set(messageIdStr, file);
+                    
+                    console.log(`PDF: Mapped messageId ${messageIdStr} to file ${file.id}`);
                 }
             });
             
             console.log(
-                `PDF: Mapped ${mediaFilesMap.size} media file records for chat ${chatData.id}`,
+                `PDF: Mapped ${mediaFilesMap.size} media file records (${messageToMediaMap.size} by message ID) for chat ${chatData.id}`,
             );
         } catch (error) {
             console.error(
@@ -241,55 +255,108 @@ async function generatePdfWithPdfLib(
                 );
                 contentEndY = finalY;
             } else if (message.type === "voice" && message.mediaUrl) {
-                // Convert message ID to string for consistent lookup - it could be undefined or numeric
-                const messageIdStr = message.id ? String(message.id) : undefined;
-                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                // Try multiple ways to find the media file for this message
+                let mediaFile;
+                
+                // 1. Try by direct message ID if available
+                if (message.id) {
+                    const messageIdStr = String(message.id);
+                    // Try direct ID match
+                    mediaFile = mediaFilesMap.get(messageIdStr);
+                    // Try with msg_ prefix
+                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    // Try from dedicated message map
+                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                }
+                
+                // 2. Log what we found for debugging
+                if (mediaFile) {
+                    console.log(`PDF: Found media file ${mediaFile.id} for voice message ${message.id}`);
+                } else {
+                    console.log(`PDF: No media file found for voice message ${message.id}`);
+                }
                 
                 contentEndY = await drawVoiceMessageLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFile, // Pass potential MediaFile
+                    mediaFile,
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
                     y,
                     LINK_COLOR,
-                    chatData.id, // Pass chatId if needed for logging/context
+                    chatData.id,
                 );
+                
             } else if (message.type === "image" && message.mediaUrl) {
-                // Convert message ID to string for consistent lookup
-                const messageIdStr = message.id ? String(message.id) : undefined;
-                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                // Try multiple ways to find the media file for this message
+                let mediaFile;
+                
+                // 1. Try by direct message ID if available
+                if (message.id) {
+                    const messageIdStr = String(message.id);
+                    // Try direct ID match
+                    mediaFile = mediaFilesMap.get(messageIdStr);
+                    // Try with msg_ prefix
+                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    // Try from dedicated message map
+                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                }
+                
+                // 2. Log what we found for debugging
+                if (mediaFile) {
+                    console.log(`PDF: Found media file ${mediaFile.id} for image message ${message.id}`);
+                } else {
+                    console.log(`PDF: No media file found for image message ${message.id}`);
+                }
                 
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFile, // Pass potential MediaFile
+                    mediaFile,
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
                     y,
                     LINK_COLOR,
-                    chatData.id, // Pass chatId if needed for logging/context
+                    chatData.id,
                 );
+                
             } else if (message.type === "attachment" && message.mediaUrl) {
-                // Convert message ID to string for consistent lookup
-                const messageIdStr = message.id ? String(message.id) : undefined;
-                const mediaFile = messageIdStr ? mediaFilesMap.get(messageIdStr) : undefined;
+                // Try multiple ways to find the media file for this message
+                let mediaFile;
+                
+                // 1. Try by direct message ID if available
+                if (message.id) {
+                    const messageIdStr = String(message.id);
+                    // Try direct ID match
+                    mediaFile = mediaFilesMap.get(messageIdStr);
+                    // Try with msg_ prefix
+                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    // Try from dedicated message map
+                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                }
+                
+                // 2. Log what we found for debugging
+                if (mediaFile) {
+                    console.log(`PDF: Found media file ${mediaFile.id} for attachment message ${message.id}`);
+                } else {
+                    console.log(`PDF: No media file found for attachment message ${message.id}`);
+                }
                 
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
                     message,
-                    mediaFile, // Pass potential MediaFile
+                    mediaFile,
                     timesRomanFont,
                     timesRomanBoldFont,
                     contentX,
                     y,
                     LINK_COLOR,
-                    chatData.id, // Pass chatId if needed for logging/context
+                    chatData.id,
                 );
             } else {
                 // Handle unknown or unsupported types
@@ -395,10 +462,27 @@ async function generatePdfWithPdfLib(
     
     // Draw media file entries (up to what fits on the page)
     const mediaFilesArray = Array.from(mediaFilesMap.values());
+    
+    // Log detailed information about the media files map for debugging
+    console.log(`PDF: Media files map size: ${mediaFilesMap.size}`);
+    console.log(`PDF: Media files array length: ${mediaFilesArray.length}`);
+    
+    // Count unique files to avoid duplicates 
+    const uniqueMediaFiles = new Map<string, MediaFile>();
+    mediaFilesArray.forEach(file => {
+        if (file && file.id) {
+            uniqueMediaFiles.set(file.id, file);
+        }
+    });
+    console.log(`PDF: Unique media files count: ${uniqueMediaFiles.size}`);
+    
+    // Use the deduplicated list for display
+    const displayMediaFiles = Array.from(uniqueMediaFiles.values());
     const entriesPerPage = 25; // Approximate, adjust based on actual space needs
     
     // If we have no media files, show a message
-    if (mediaFilesArray.length === 0) {
+    if (displayMediaFiles.length === 0) {
+        console.log("PDF: No media files to display in summary table");
         summaryPage.drawText("No media files are present in this transcript.", {
             x: MARGIN,
             y: summaryY,
@@ -408,9 +492,10 @@ async function generatePdfWithPdfLib(
         });
         summaryY -= 20;
     } else {
+        console.log(`PDF: Displaying ${displayMediaFiles.length} media files in summary table`);
         // Draw media file entries
-        for (let i = 0; i < Math.min(mediaFilesArray.length, entriesPerPage); i++) {
-            const file = mediaFilesArray[i];
+        for (let i = 0; i < Math.min(displayMediaFiles.length, entriesPerPage); i++) {
+            const file = displayMediaFiles[i];
             if (!file || !file.id) continue;
             
             // Truncate filename if too long
@@ -450,7 +535,7 @@ async function generatePdfWithPdfLib(
             summaryY -= 15;
             
             // Add a thin separator line
-            if (i < Math.min(mediaFilesArray.length, entriesPerPage) - 1) {
+            if (i < Math.min(displayMediaFiles.length, entriesPerPage) - 1) {
                 summaryPage.drawLine({
                     start: { x: MARGIN, y: summaryY + 7 },
                     end: { x: width - MARGIN, y: summaryY + 7 },
