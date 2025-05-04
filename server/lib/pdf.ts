@@ -892,63 +892,16 @@ function drawPdfHeader(
 
     y -= 10; // Extra space before separator line
 
-    // Add link to media summary page
-    const mediaLinkText =
-        ">> See Media Files and Authentication Summary on the Last Page";
-    const linkY = y - 15;
-    page.drawText(mediaLinkText, {
-        x: pageWidth - MARGIN - textFont.widthOfTextAtSize(mediaLinkText, 9),
-        y: linkY,
+    // Add text about media summary page
+    const summaryText = "See Media Files and Authentication Summary on the Last Page";
+    const textY = y - 15;
+    page.drawText(summaryText, {
+        x: pageWidth - MARGIN - textFont.widthOfTextAtSize(summaryText, 9),
+        y: textY,
         size: 9,
         font: textFont,
-        color: LINK_COLOR,
+        color: META_COLOR,
     });
-
-    // Only create PDF annotations if we have the pdfDoc
-    if (pdfDoc) {
-        try {
-            // Create annotation for the link to the last page
-            const textWidth = textFont.widthOfTextAtSize(mediaLinkText, 9);
-            const linkAnnotationRef = pdfDoc?.context.register(
-                pdfDoc?.context.obj({
-                    Type: PDFName.of("Annot"),
-                    Subtype: PDFName.of("Link"),
-                    Rect: [
-                        pageWidth - MARGIN - textWidth,
-                        linkY - 2,
-                        pageWidth - MARGIN,
-                        linkY + 10,
-                    ],
-                    Border: [0, 0, 0],
-                    Dest: [
-                        pdfDoc?.getPageCount() || 1,
-                        PDFName.of("XYZ"),
-                        null,
-                        null,
-                        null,
-                    ],
-                }),
-            );
-
-            // Add annotation to the page's annotations array
-            let annots = page.node.lookup(PDFName.of("Annots"), PDFArray);
-            if (!annots) {
-                annots = pdfDoc?.context.obj([]);
-                page.node.set(PDFName.of("Annots"), annots);
-            }
-
-            // Add the annotation only if both linkAnnotationRef and annots exist
-            if (linkAnnotationRef && annots) {
-                annots.push(linkAnnotationRef);
-            }
-        } catch (error) {
-            // Silently fail on annotation creation - annotations are not critical
-            console.error(
-                "Failed to create summary page link annotation:",
-                error,
-            );
-        }
-    }
 
     y -= 25; // Extra space before separator line
 
