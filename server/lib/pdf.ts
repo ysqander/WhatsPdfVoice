@@ -213,17 +213,17 @@ async function generatePdfWithPdfLib(
       } else if (message.type === "voice") {
         if (message.mediaUrl) {
           const playText = "> Play Voice Message";
-          
+
           // Check if we need a new page for the voice message and duration
           // We need at least 60 pixels for the entire voice message component
           if (y < margin + 60) {
             currentPage = pdfDoc.addPage();
             y = height - margin;
           }
-          
-          // Add extra vertical spacing before voice messages
-          y -= 15;
-          
+
+          // Add extra vertical spacing before voice messages - REDUCED SPACING HERE
+          y -= 8; //Reduced from 15
+
           // Create button-like appearance with a box around the text
           const textWidth = timesRomanBoldFont.widthOfTextAtSize(playText, 10);
           const buttonPadding = 8;
@@ -231,7 +231,7 @@ async function generatePdfWithPdfLib(
           const buttonY = y;  // Start at current Y position
           const buttonWidth = textWidth + (buttonPadding * 2);
           const buttonHeight = 20;
-          
+
           // Draw button border (light blue rectangle)
           currentPage.drawRectangle({
             x: buttonX,
@@ -244,7 +244,7 @@ async function generatePdfWithPdfLib(
             borderOpacity: 0.8,
             opacity: 0.3,
           });
-          
+
           // Draw the link text on top of the background
           currentPage.drawText(playText, {
             x: buttonX + buttonPadding,
@@ -253,31 +253,31 @@ async function generatePdfWithPdfLib(
             font: timesRomanBoldFont,
             color: rgb(0.2, 0.6, 0.86), // #3498DB
           });
-          
+
           // Compute link bounds for the hyperlink area
           const linkHeight = buttonHeight;
           const linkX = buttonX;
           const linkY = buttonY - buttonHeight;
-          
+
           // For voice messages with an R2-stored media, use our proxy endpoint
           let messageId: string | number | undefined;
           let proxyUrl: string;
-          
+
           // Determine the base URL of our application for absolute URLs
           // In Replit, we can use REPLIT_DOMAINS or fallback to localhost
           const appBaseUrl = process.env.REPLIT_DOMAINS 
             ? `https://${process.env.REPLIT_DOMAINS}`
             : 'http://localhost:5000'; // Fallback for local development
-          
+
           console.log(`Using app base URL: ${appBaseUrl}`);
-          
+
           // If this is an R2 URL, extract the mediaId from our storage
           if (message.id) {
             messageId = message.id;
             const mediaFiles = await storage.getMediaFilesByChat(chatData.id!);
             // Find the media file associated with this message
             const mediaFile = mediaFiles.find(file => file.messageId === messageId);
-            
+
             if (mediaFile) {
               // Use our proxy endpoint which will generate fresh signed URLs on demand
               // Using absolute URL that includes the hostname
@@ -317,7 +317,7 @@ async function generatePdfWithPdfLib(
 
           // Get existing annotations or create new array
           let annots = currentPage.node.lookup(PDFName.of('Annots'));
-          
+
           if (annots instanceof PDFArray) {
             // Push onto existing array
             annots.push(linkAnnotationRef);
@@ -331,7 +331,7 @@ async function generatePdfWithPdfLib(
 
           // Update our y-position to be right below the button
           y = buttonY - buttonHeight - 5;
-          
+
           // For the duration text
           if (message.duration) {
             // Check if we need a new page for the duration text
@@ -339,7 +339,7 @@ async function generatePdfWithPdfLib(
               currentPage = pdfDoc.addPage();
               y = height - margin;
             }
-            
+
             const formattedDuration = formatDuration(message.duration);
             currentPage.drawText(`Duration: ${formattedDuration}`, {
               x: margin + 20,
@@ -348,14 +348,14 @@ async function generatePdfWithPdfLib(
               font: timesRomanFont,
               color: rgb(0.5, 0.5, 0.5),
             });
-            
+
             // Move below the duration text with adequate spacing
             y -= 20;
           } else {
             // Add standard spacing below the button
             y -= 10;
           }
-          
+
           // Add extra padding after the entire voice message component
           y -= 10;
         } else {
@@ -367,7 +367,7 @@ async function generatePdfWithPdfLib(
             font: timesRomanBoldFont,
             color: rgb(0.2, 0.6, 0.86), // #3498DB
           });
-          
+
           // Standard spacing
           y -= 20;
         }
