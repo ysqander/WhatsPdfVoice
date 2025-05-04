@@ -69,6 +69,19 @@ export async function generatePdf(chatData: ChatExport): Promise<string> {
 async function generatePdfWithPdfLib(
     chatData: ChatExport,
 ): Promise<{ pdfPath: string; pdfId: string }> {
+    console.log(
+        `[PDF DEBUG] generatePdfWithPdfLib called for chatData.id: ${chatData.id}`,
+    );
+    if (!chatData.id) {
+        console.error(
+            "[PDF DEBUG] chatData.id is MISSING or invalid when entering generatePdfWithPdfLib!",
+        );
+        // Consider throwing an error here if an ID is mandatory for the summary
+        throw new Error(
+            "Cannot generate PDF summary without a valid chatData.id",
+        );
+    }
+
     const pdfDoc = await PDFDocument.create();
 
     // Add metadata
@@ -90,38 +103,52 @@ async function generatePdfWithPdfLib(
     // --- Fetch Media File Data (Crucial for Proxy Links) ---
     let mediaFilesMap = new Map<string, MediaFile>(); // Map ID string -> MediaFile
     let messageToMediaMap = new Map<string, MediaFile>(); // Map to help find files by message ID
-    
+
     if (chatData.id) {
         try {
+            console.log(
+                `[PDF DEBUG] Attempting storage.getMediaFilesByChat with ID: ${chatData.id}`,
+            );
             const mediaFiles = await storage.getMediaFilesByChat(chatData.id);
-            console.log(`PDF: Retrieved ${mediaFiles.length} media files from storage for chat ${chatData.id}`);
-            
+            console.log(
+                `[PDF DEBUG] storage.getMediaFilesByChat returned ${mediaFiles.length} files.`,
+            );
+            if (mediaFiles.length > 0) {
+                console.log(
+                    `[PDF DEBUG] First media file sample: ID=${mediaFiles[0]?.id}, type=${mediaFiles[0]?.type}, messageId=${mediaFiles[0]?.messageId}, chatExportId=${mediaFiles[0]?.chatExportId}`,
+                ); // Log chatExportId if available on MediaFile type
+            }
+
             // First log all media files for debugging
             mediaFiles.forEach((file, index) => {
-                console.log(`PDF: Media file ${index + 1}/${mediaFiles.length}: ID=${file.id}, type=${file.type}, messageId=${file.messageId}`);
+                console.log(
+                    `PDF: Media file ${index + 1}/${mediaFiles.length}: ID=${file.id}, type=${file.type}, messageId=${file.messageId}`,
+                );
             });
-            
+
             // Store media files both by messageId and by their own id for complete access
             // Also maintain a separate map strictly by message ID
             mediaFiles.forEach((file) => {
-                // Always store by the file's own ID 
+                // Always store by the file's own ID
                 if (file.id) {
                     mediaFilesMap.set(file.id, file);
                 }
-                
+
                 // Also store by message ID (if present) in both maps
                 if (file.messageId !== undefined && file.messageId !== null) {
                     // Store in main map with messageId as string key
                     const messageIdStr = String(file.messageId);
                     mediaFilesMap.set(`msg_${messageIdStr}`, file);
-                    
+
                     // Store in dedicated message->media lookup map
                     messageToMediaMap.set(messageIdStr, file);
-                    
-                    console.log(`PDF: Mapped messageId ${messageIdStr} to file ${file.id}`);
+
+                    console.log(
+                        `PDF: Mapped messageId ${messageIdStr} to file ${file.id}`,
+                    );
                 }
             });
-            
+
             console.log(
                 `PDF: Mapped ${mediaFilesMap.size} media file records (${messageToMediaMap.size} by message ID) for chat ${chatData.id}`,
             );
@@ -257,25 +284,31 @@ async function generatePdfWithPdfLib(
             } else if (message.type === "voice" && message.mediaUrl) {
                 // Try multiple ways to find the media file for this message
                 let mediaFile;
-                
+
                 // 1. Try by direct message ID if available
                 if (message.id) {
                     const messageIdStr = String(message.id);
                     // Try direct ID match
                     mediaFile = mediaFilesMap.get(messageIdStr);
                     // Try with msg_ prefix
-                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    if (!mediaFile)
+                        mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
                     // Try from dedicated message map
-                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                    if (!mediaFile)
+                        mediaFile = messageToMediaMap.get(messageIdStr);
                 }
-                
+
                 // 2. Log what we found for debugging
                 if (mediaFile) {
-                    console.log(`PDF: Found media file ${mediaFile.id} for voice message ${message.id}`);
+                    console.log(
+                        `PDF: Found media file ${mediaFile.id} for voice message ${message.id}`,
+                    );
                 } else {
-                    console.log(`PDF: No media file found for voice message ${message.id}`);
+                    console.log(
+                        `PDF: No media file found for voice message ${message.id}`,
+                    );
                 }
-                
+
                 contentEndY = await drawVoiceMessageLink(
                     currentPage,
                     pdfDoc,
@@ -288,29 +321,34 @@ async function generatePdfWithPdfLib(
                     LINK_COLOR,
                     chatData.id,
                 );
-                
             } else if (message.type === "image" && message.mediaUrl) {
                 // Try multiple ways to find the media file for this message
                 let mediaFile;
-                
+
                 // 1. Try by direct message ID if available
                 if (message.id) {
                     const messageIdStr = String(message.id);
                     // Try direct ID match
                     mediaFile = mediaFilesMap.get(messageIdStr);
                     // Try with msg_ prefix
-                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    if (!mediaFile)
+                        mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
                     // Try from dedicated message map
-                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                    if (!mediaFile)
+                        mediaFile = messageToMediaMap.get(messageIdStr);
                 }
-                
+
                 // 2. Log what we found for debugging
                 if (mediaFile) {
-                    console.log(`PDF: Found media file ${mediaFile.id} for image message ${message.id}`);
+                    console.log(
+                        `PDF: Found media file ${mediaFile.id} for image message ${message.id}`,
+                    );
                 } else {
-                    console.log(`PDF: No media file found for image message ${message.id}`);
+                    console.log(
+                        `PDF: No media file found for image message ${message.id}`,
+                    );
                 }
-                
+
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
@@ -323,29 +361,34 @@ async function generatePdfWithPdfLib(
                     LINK_COLOR,
                     chatData.id,
                 );
-                
             } else if (message.type === "attachment" && message.mediaUrl) {
                 // Try multiple ways to find the media file for this message
                 let mediaFile;
-                
+
                 // 1. Try by direct message ID if available
                 if (message.id) {
                     const messageIdStr = String(message.id);
                     // Try direct ID match
                     mediaFile = mediaFilesMap.get(messageIdStr);
                     // Try with msg_ prefix
-                    if (!mediaFile) mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
+                    if (!mediaFile)
+                        mediaFile = mediaFilesMap.get(`msg_${messageIdStr}`);
                     // Try from dedicated message map
-                    if (!mediaFile) mediaFile = messageToMediaMap.get(messageIdStr);
+                    if (!mediaFile)
+                        mediaFile = messageToMediaMap.get(messageIdStr);
                 }
-                
+
                 // 2. Log what we found for debugging
                 if (mediaFile) {
-                    console.log(`PDF: Found media file ${mediaFile.id} for attachment message ${message.id}`);
+                    console.log(
+                        `PDF: Found media file ${mediaFile.id} for attachment message ${message.id}`,
+                    );
                 } else {
-                    console.log(`PDF: No media file found for attachment message ${message.id}`);
+                    console.log(
+                        `PDF: No media file found for attachment message ${message.id}`,
+                    );
                 }
-                
+
                 contentEndY = await drawMediaLink(
                     currentPage,
                     pdfDoc,
@@ -381,49 +424,68 @@ async function generatePdfWithPdfLib(
     // Add a page at the end with file hash information
     const summaryPage = pdfDoc.addPage(PageSizes.A4);
     let summaryY = height - MARGIN;
-    
+
     // Draw heading
     summaryPage.drawText("MEDIA FILES AND AUTHENTICATION SUMMARY", {
-        x: width / 2 - timesRomanBoldFont.widthOfTextAtSize("MEDIA FILES AND AUTHENTICATION SUMMARY", 14) / 2,
+        x:
+            width / 2 -
+            timesRomanBoldFont.widthOfTextAtSize(
+                "MEDIA FILES AND AUTHENTICATION SUMMARY",
+                14,
+            ) /
+                2,
         y: summaryY,
         size: 14,
         font: timesRomanBoldFont,
         color: PRIMARY_COLOR,
     });
     summaryY -= 30;
-    
+
     // Draw explanatory text
-    summaryPage.drawText("This page provides a summary of all media files referenced in this transcript for Rule 902(14) compliance.", {
-        x: MARGIN,
-        y: summaryY,
-        size: 10,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+    summaryPage.drawText(
+        "This page provides a summary of all media files referenced in this transcript for Rule 902(14) compliance.",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 10,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 20;
-    
-    summaryPage.drawText("Media files are referenced by their unique identifier in the transcript links. These identifiers", {
-        x: MARGIN,
-        y: summaryY,
-        size: 10,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+
+    summaryPage.drawText(
+        "Media files are referenced by their unique identifier in the transcript links. These identifiers",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 10,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 15;
-    
-    summaryPage.drawText("correspond to filenames in the attachments directory of the evidence package.", {
-        x: MARGIN,
-        y: summaryY,
-        size: 10,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+
+    summaryPage.drawText(
+        "correspond to filenames in the attachments directory of the evidence package.",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 10,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 30;
-    
-    // Draw table headers
-    const colWidths = [120, 240, 90];
-    const colX = [MARGIN, MARGIN + colWidths[0], MARGIN + colWidths[0] + colWidths[1]];
-    
+
+    // Draw table headers - added column for hash value
+    const colWidths = [200, 200, 70, 0]; // Last column (hash) will be on next line
+    const colX = [
+        MARGIN,
+        MARGIN + colWidths[0],
+        MARGIN + colWidths[0] + colWidths[1],
+    ];
+
     summaryPage.drawText("MEDIA ID", {
         x: colX[0],
         y: summaryY,
@@ -431,7 +493,7 @@ async function generatePdfWithPdfLib(
         font: timesRomanBoldFont,
         color: PRIMARY_COLOR,
     });
-    
+
     summaryPage.drawText("ORIGINAL FILENAME", {
         x: colX[1],
         y: summaryY,
@@ -439,7 +501,7 @@ async function generatePdfWithPdfLib(
         font: timesRomanBoldFont,
         color: PRIMARY_COLOR,
     });
-    
+
     summaryPage.drawText("TYPE", {
         x: colX[2],
         y: summaryY,
@@ -447,9 +509,9 @@ async function generatePdfWithPdfLib(
         font: timesRomanBoldFont,
         color: PRIMARY_COLOR,
     });
-    
+
     summaryY -= 15;
-    
+
     // Draw horizontal line
     summaryPage.drawLine({
         start: { x: MARGIN, y: summaryY + 5 },
@@ -457,29 +519,40 @@ async function generatePdfWithPdfLib(
         thickness: 1,
         color: rgb(0.8, 0.8, 0.8),
     });
-    
+
     summaryY -= 15;
-    
+
     // Draw media file entries (up to what fits on the page)
     const mediaFilesArray = Array.from(mediaFilesMap.values());
-    
+
     // Log detailed information about the media files map for debugging
     console.log(`PDF: Media files map size: ${mediaFilesMap.size}`);
     console.log(`PDF: Media files array length: ${mediaFilesArray.length}`);
-    
-    // Count unique files to avoid duplicates 
+
+    // Count unique files to avoid duplicates
     const uniqueMediaFiles = new Map<string, MediaFile>();
-    mediaFilesArray.forEach(file => {
+    mediaFilesArray.forEach((file) => {
         if (file && file.id) {
             uniqueMediaFiles.set(file.id, file);
         }
     });
     console.log(`PDF: Unique media files count: ${uniqueMediaFiles.size}`);
-    
+
     // Use the deduplicated list for display
     const displayMediaFiles = Array.from(uniqueMediaFiles.values());
     const entriesPerPage = 25; // Approximate, adjust based on actual space needs
-    
+    console.log(
+        `[PDF DEBUG] Summary Page: displayMediaFiles count: ${displayMediaFiles.length}`,
+    );
+    if (displayMediaFiles.length > 0) {
+        console.log(
+            `[PDF DEBUG] Summary Page: First display file sample: ID=${displayMediaFiles[0]?.id}, Name=${displayMediaFiles[0]?.originalName}, Type=${displayMediaFiles[0]?.type}`,
+        );
+    } else {
+        console.log(
+            `[PDF DEBUG] Summary Page: displayMediaFiles is empty. mediaFilesMap size was ${mediaFilesMap.size}. uniqueMediaFiles size was ${uniqueMediaFiles.size}`,
+        );
+    }
     // If we have no media files, show a message
     if (displayMediaFiles.length === 0) {
         console.log("PDF: No media files to display in summary table");
@@ -492,28 +565,51 @@ async function generatePdfWithPdfLib(
         });
         summaryY -= 20;
     } else {
-        console.log(`PDF: Displaying ${displayMediaFiles.length} media files in summary table`);
+        console.log(
+            `PDF: Displaying ${displayMediaFiles.length} media files in summary table`,
+        );
         // Draw media file entries
-        for (let i = 0; i < Math.min(displayMediaFiles.length, entriesPerPage); i++) {
+        for (
+            let i = 0;
+            i < Math.min(displayMediaFiles.length, entriesPerPage);
+            i++
+        ) {
             const file = displayMediaFiles[i];
             if (!file || !file.id) continue;
-            
+
             // Truncate filename if too long
-            const origFilename = file.originalName || path.basename(file.key || "unknown");
-            const truncatedFilename = origFilename.length > 40 ? 
-                origFilename.substring(0, 37) + "..." : 
-                origFilename;
+            const origFilename =
+                file.originalName || path.basename(file.key || "unknown");
+            const truncatedFilename =
+                origFilename.length > 40
+                    ? origFilename.substring(0, 37) + "..."
+                    : origFilename;
+
+            // Use full media ID as requested (no truncation)
+            const mediaId = file.id;
             
-            // Draw media ID (truncated if needed)
-            const mediaId = file.id.length > 15 ? file.id.substring(0, 12) + "..." : file.id;
+            // Determine more descriptive media type
+            let displayType = file.type || "unknown";
+            
+            // If it's an attachment with a PDF extension, show "pdf" instead
+            if (file.type === "attachment") {
+                const fileExtension = path.extname(file.key || origFilename).toLowerCase();
+                if (fileExtension === ".pdf") {
+                    displayType = "pdf";
+                } else {
+                    displayType = "other";
+                }
+            }
+            
+            // Draw media ID
             summaryPage.drawText(mediaId, {
                 x: colX[0],
                 y: summaryY,
-                size: 9,
+                size: 8,  // Smaller font size to fit full ID
                 font: timesRomanFont,
                 color: TEXT_COLOR,
             });
-            
+
             // Draw original filename
             summaryPage.drawText(truncatedFilename, {
                 x: colX[1],
@@ -522,18 +618,43 @@ async function generatePdfWithPdfLib(
                 font: timesRomanFont,
                 color: TEXT_COLOR,
             });
-            
+
             // Draw media type
-            summaryPage.drawText(file.type || "unknown", {
+            summaryPage.drawText(displayType, {
                 x: colX[2],
                 y: summaryY,
                 size: 9,
                 font: timesRomanFont,
                 color: TEXT_COLOR,
             });
-            
+
             summaryY -= 15;
             
+            // Add SHA-256 hash on the next line with some indentation
+            const hashLabel = "SHA-256: ";
+            // Generate a placeholder hash for now - in production this would come from the MediaFile object
+            // or be calculated from the file content
+            const fileHash = file.fileHash || `sha256-${file.id.substring(0, 6)}`;
+            
+            summaryPage.drawText(hashLabel, {
+                x: MARGIN + 20, // Indent the hash line
+                y: summaryY,
+                size: 7,
+                font: timesRomanBoldFont,
+                color: TEXT_COLOR,
+            });
+            
+            // Draw actual hash value in a smaller font
+            summaryPage.drawText(fileHash, {
+                x: MARGIN + 20 + timesRomanBoldFont.widthOfTextAtSize(hashLabel, 7),
+                y: summaryY,
+                size: 7,
+                font: timesRomanFont,
+                color: TEXT_COLOR,
+            });
+            
+            summaryY -= 10; // Add extra space after the hash
+
             // Add a thin separator line
             if (i < Math.min(displayMediaFiles.length, entriesPerPage) - 1) {
                 summaryPage.drawLine({
@@ -546,10 +667,10 @@ async function generatePdfWithPdfLib(
             }
         }
     }
-    
+
     // Add legal text at bottom
     summaryY = Math.min(summaryY, 150); // Ensure enough space at bottom
-    
+
     summaryPage.drawText("LEGAL AUTHENTICATION", {
         x: MARGIN,
         y: summaryY,
@@ -558,42 +679,54 @@ async function generatePdfWithPdfLib(
         color: PRIMARY_COLOR,
     });
     summaryY -= 20;
-    
-    summaryPage.drawText("This transcript and its associated media files have been prepared in accordance with", {
-        x: MARGIN,
-        y: summaryY,
-        size: 9,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+
+    summaryPage.drawText(
+        "This transcript and its associated media files have been prepared in accordance with",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 9,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 15;
-    
-    summaryPage.drawText("Federal Rule of Evidence 902(14), which provides for self-authentication of electronic evidence.", {
-        x: MARGIN,
-        y: summaryY,
-        size: 9,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+
+    summaryPage.drawText(
+        "Federal Rule of Evidence 902(14), which provides for self-authentication of electronic evidence.",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 9,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 15;
-    
-    summaryPage.drawText("The included manifest.json file contains SHA-256 cryptographic hashes of all files in this package.", {
-        x: MARGIN,
-        y: summaryY,
-        size: 9,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
+
+    summaryPage.drawText(
+        "The included manifest.json file contains SHA-256 cryptographic hashes of all files in this package.",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 9,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
     summaryY -= 15;
-    
-    summaryPage.drawText("These hashes can be independently verified to confirm file integrity without expert testimony.", {
-        x: MARGIN,
-        y: summaryY,
-        size: 9,
-        font: timesRomanFont,
-        color: TEXT_COLOR,
-    });
-    
+
+    summaryPage.drawText(
+        "These hashes can be independently verified to confirm file integrity without expert testimony.",
+        {
+            x: MARGIN,
+            y: summaryY,
+            size: 9,
+            font: timesRomanFont,
+            color: TEXT_COLOR,
+        },
+    );
+
     // --- Add Page Numbers to All Pages ---
     const totalPages = pdfDoc.getPageCount();
     for (let i = 0; i < totalPages; i++) {
@@ -613,7 +746,9 @@ async function generatePdfWithPdfLib(
         console.log("PDF details:", { pdfId, size: pdfBytes.length });
     } catch (error: any) {
         console.error("Error writing PDF file:", error);
-        throw new Error(`Failed to write PDF file: ${error.message || String(error)}`);
+        throw new Error(
+            `Failed to write PDF file: ${error.message || String(error)}`,
+        );
     }
 
     return { pdfPath, pdfId };
@@ -744,7 +879,8 @@ function drawPdfHeader(
     y -= 10; // Extra space before separator line
 
     // Add link to media summary page
-    const mediaLinkText = ">> See Media Files and Authentication Summary on the Last Page";
+    const mediaLinkText =
+        ">> See Media Files and Authentication Summary on the Last Page";
     const linkY = y - 15;
     page.drawText(mediaLinkText, {
         x: pageWidth - MARGIN - textFont.widthOfTextAtSize(mediaLinkText, 9),
@@ -753,7 +889,7 @@ function drawPdfHeader(
         font: textFont,
         color: LINK_COLOR,
     });
-    
+
     // Only create PDF annotations if we have the pdfDoc
     if (pdfDoc) {
         try {
@@ -764,35 +900,44 @@ function drawPdfHeader(
                     Type: PDFName.of("Annot"),
                     Subtype: PDFName.of("Link"),
                     Rect: [
-                        pageWidth - MARGIN - textWidth, 
-                        linkY - 2, 
-                        pageWidth - MARGIN, 
-                        linkY + 10
+                        pageWidth - MARGIN - textWidth,
+                        linkY - 2,
+                        pageWidth - MARGIN,
+                        linkY + 10,
                     ],
                     Border: [0, 0, 0],
-                    Dest: [pdfDoc?.getPageCount() || 1, PDFName.of("XYZ"), null, null, null]
-                })
+                    Dest: [
+                        pdfDoc?.getPageCount() || 1,
+                        PDFName.of("XYZ"),
+                        null,
+                        null,
+                        null,
+                    ],
+                }),
             );
-            
+
             // Add annotation to the page's annotations array
             let annots = page.node.lookup(PDFName.of("Annots"), PDFArray);
             if (!annots) {
                 annots = pdfDoc?.context.obj([]);
                 page.node.set(PDFName.of("Annots"), annots);
             }
-            
+
             // Add the annotation only if both linkAnnotationRef and annots exist
             if (linkAnnotationRef && annots) {
                 annots.push(linkAnnotationRef);
             }
         } catch (error) {
             // Silently fail on annotation creation - annotations are not critical
-            console.error("Failed to create summary page link annotation:", error);
+            console.error(
+                "Failed to create summary page link annotation:",
+                error,
+            );
         }
     }
-    
+
     y -= 25; // Extra space before separator line
-    
+
     // Draw horizontal line separator
     page.drawLine({
         start: { x: MARGIN, y: y },
@@ -1090,17 +1235,19 @@ async function drawMediaLink(
     chatId?: number, // Optional: For context in logging
 ): Promise<number> {
     // Returns the Y position below the link
-    
+
     // Determine the media type display label
     let mediaTypeLabel = "File";
     let icon = "📄";
-    
+
     if (message.type === "image") {
         mediaTypeLabel = "Image";
         icon = "🖼️";
     } else if (message.type === "attachment") {
         // Check common file extensions for better labels
-        const ext = message.mediaUrl ? path.extname(message.mediaUrl).toLowerCase() : "";
+        const ext = message.mediaUrl
+            ? path.extname(message.mediaUrl).toLowerCase()
+            : "";
         if (ext === ".pdf") {
             mediaTypeLabel = "PDF";
             icon = "📄";
@@ -1118,14 +1265,14 @@ async function drawMediaLink(
             icon = "🎬";
         }
     }
-    
+
     const mediaFilename = message.mediaUrl
         ? path.basename(message.mediaUrl)
         : `attached_${mediaTypeLabel.toLowerCase()}`;
-    
+
     // Non-unicode fallback icons if needed
     const safeIcon = ""; // Use empty string as PDF may not support Unicode emojis
-    
+
     // Compose link text
     const linkText = `${safeIcon} View ${mediaTypeLabel}: ${mediaFilename}`;
     const linkFontSize = 10;
