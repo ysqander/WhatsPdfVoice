@@ -3,10 +3,10 @@ import { ProcessingOptions } from "@shared/types";
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { 
-  uploadFileToR2, 
-  getSignedR2Url, 
-  deleteFileFromR2
+import {
+  uploadFileToR2,
+  getSignedR2Url,
+  deleteFileFromR2,
 } from "./lib/r2Storage";
 import { mediaProxyStorage } from "./mediaProxyStorage";
 import { eq } from "drizzle-orm";
@@ -19,14 +19,15 @@ import {
   type InsertChatExport,
   type InsertMessage,
 } from "@shared/schema";
+import { DatabaseStorage } from "./databaseStorage";
 
 // Create directories for storing files
-const baseDir = path.join(os.tmpdir(), 'whatspdf');
-const pdfDir = path.join(baseDir, 'pdfs');
-const mediaDir = path.join(baseDir, 'media');
+const baseDir = path.join(os.tmpdir(), "whatspdf");
+const pdfDir = path.join(baseDir, "pdfs");
+const mediaDir = path.join(baseDir, "media");
 
 // Ensure directories exist
-[baseDir, pdfDir, mediaDir].forEach(dir => {
+[baseDir, pdfDir, mediaDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -39,32 +40,41 @@ export interface IStorage {
   saveMessage(message: InsertMessage): Promise<Message>;
   getMessagesByChatExportId(chatExportId: number): Promise<Message[]>;
   getLatestChatExport(): Promise<ChatExport | undefined>;
-  saveProcessingProgress(clientId: string, progress: number, step?: number): void;
-  getProcessingProgress(clientId: string): { progress: number, step?: number };
+  saveProcessingProgress(
+    clientId: string,
+    progress: number,
+    step?: number,
+  ): void;
+  getProcessingProgress(clientId: string): { progress: number; step?: number };
   savePdfUrl(chatExportId: number, pdfUrl: string): Promise<void>;
-  
+
   // Media file management with R2
   uploadMediaToR2(
-    filePath: string, 
-    contentType: string, 
-    chatExportId: number, 
-    messageId?: number, 
-    type?: 'voice' | 'image' | 'attachment' | 'pdf',
+    filePath: string,
+    contentType: string,
+    chatExportId: number,
+    messageId?: number,
+    type?: "voice" | "image" | "attachment" | "pdf",
     originalName?: string,
-    fileHash?: string
+    fileHash?: string,
   ): Promise<MediaFile>;
   getMediaUrl(mediaId: string): Promise<string>;
   deleteMedia(mediaId: string): Promise<boolean>;
   getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]>;
   getMediaFile(mediaId: string): Promise<MediaFile | undefined>;
-  updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void>;
+  updateMessageMediaUrl(
+    messageId: number,
+    r2Key: string,
+    r2Url: string,
+  ): Promise<void>;
+  updateMessageProxyUrl(messageId: number, proxyUrl: string): Promise<void>;
 }
 
 // In-memory storage implementation
 export class MemStorage implements IStorage {
   private chatExports: Map<number, ChatExport>;
   private messages: Map<number, Message>;
-  private processingProgress: Map<string, { progress: number, step?: number }>;
+  private processingProgress: Map<string, { progress: number; step?: number }>;
   private mediaFiles: Map<string, MediaFile>;
   private currentChatExportId: number;
   private currentMessageId: number;
@@ -100,10 +110,10 @@ export class MemStorage implements IStorage {
     const savedMessage: Message = {
       ...message,
       id,
-      type: message.type || 'text', // Ensure type is always set
+      type: message.type || "text", // Ensure type is always set
       mediaUrl: message.mediaUrl || null,
       duration: message.duration || null,
-      isDeleted: message.isDeleted || null
+      isDeleted: message.isDeleted || null,
     };
     this.messages.set(id, savedMessage);
     return savedMessage;
@@ -111,7 +121,7 @@ export class MemStorage implements IStorage {
 
   async getMessagesByChatExportId(chatExportId: number): Promise<Message[]> {
     return Array.from(this.messages.values()).filter(
-      (message) => message.chatExportId === chatExportId
+      (message) => message.chatExportId === chatExportId,
     );
   }
 
@@ -119,20 +129,24 @@ export class MemStorage implements IStorage {
     if (this.chatExports.size === 0) {
       return undefined;
     }
-    
+
     const entries = Array.from(this.chatExports.entries());
     const [_, latestChatExport] = entries.reduce((latest, current) => {
       return latest[0] > current[0] ? latest : current;
     });
-    
+
     return latestChatExport;
   }
 
-  saveProcessingProgress(clientId: string, progress: number, step?: number): void {
+  saveProcessingProgress(
+    clientId: string,
+    progress: number,
+    step?: number,
+  ): void {
     this.processingProgress.set(clientId, { progress, step });
   }
 
-  getProcessingProgress(clientId: string): { progress: number, step?: number } {
+  getProcessingProgress(clientId: string): { progress: number; step?: number } {
     return this.processingProgress.get(clientId) || { progress: 0 };
   }
 
@@ -150,13 +164,13 @@ export class MemStorage implements IStorage {
    * Upload a media file to R2 storage
    */
   async uploadMediaToR2(
-    filePath: string, 
-    contentType: string, 
-    chatExportId: number, 
-    messageId?: number, 
-    type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment',
+    filePath: string,
+    contentType: string,
+    chatExportId: number,
+    messageId?: number,
+    type: "voice" | "image" | "attachment" | "pdf" = "attachment",
     customOriginalName?: string,
-    customFileHash?: string
+    customFileHash?: string,
   ): Promise<MediaFile> {
     try {
       // Get file stats
@@ -166,18 +180,18 @@ export class MemStorage implements IStorage {
       // Upload to R2
       const directory = `chats/${chatExportId}/${type}`;
       const key = await uploadFileToR2(filePath, contentType, directory);
-      
+
       // Get signed URL
       const url = await getSignedR2Url(key);
-      
+
       // Create media proxy in database (this is the key change)
       const mediaProxy = await mediaProxyStorage.createMediaProxy(
-        key,     // R2 key
-        url,     // Initial R2 URL
+        key, // R2 key
+        url, // Initial R2 URL
         contentType,
-        undefined // No explicit expiry
+        undefined, // No explicit expiry
       );
-      
+
       // Create in-memory media file record
       const mediaFile: MediaFile = {
         id: mediaProxy.id, // Important: use the database-generated UUID
@@ -190,12 +204,12 @@ export class MemStorage implements IStorage {
         uploadedAt: new Date().toISOString(),
         url,
         type,
-        fileHash: customFileHash
+        fileHash: customFileHash,
       };
-      
+
       // Store in memory
       this.mediaFiles.set(mediaFile.id, mediaFile);
-      
+
       console.log(`Uploaded media file to R2: ${key}`);
       return mediaFile;
     } catch (error) {
@@ -216,22 +230,24 @@ export class MemStorage implements IStorage {
         return mediaProxy.r2Url;
       }
     } catch (err) {
-      console.log("Media not found in database, falling back to memory storage");
+      console.log(
+        "Media not found in database, falling back to memory storage",
+      );
     }
-    
+
     // Fallback to in-memory if not in database
     const mediaFile = this.mediaFiles.get(mediaId);
     if (!mediaFile) {
       throw new Error(`Media file not found: ${mediaId}`);
     }
-    
+
     // Generate a fresh signed URL
     const url = await getSignedR2Url(mediaFile.key);
-    
+
     // Update the URL in our records
     mediaFile.url = url;
     this.mediaFiles.set(mediaId, mediaFile);
-    
+
     return url;
   }
 
@@ -248,21 +264,23 @@ export class MemStorage implements IStorage {
         return true;
       }
     } catch (err) {
-      console.log("Media not found in database, falling back to memory storage");
+      console.log(
+        "Media not found in database, falling back to memory storage",
+      );
     }
-    
+
     // Fallback to in-memory if not in database
     const mediaFile = this.mediaFiles.get(mediaId);
     if (!mediaFile) {
       throw new Error(`Media file not found: ${mediaId}`);
     }
-    
+
     // Delete from R2
     await deleteFileFromR2(mediaFile.key);
-    
+
     // Remove from our records
     this.mediaFiles.delete(mediaId);
-    
+
     // If this media is associated with a message, update the message
     if (mediaFile.messageId) {
       const message = this.messages.get(mediaFile.messageId);
@@ -271,7 +289,7 @@ export class MemStorage implements IStorage {
         this.messages.set(mediaFile.messageId, message);
       }
     }
-    
+
     return true;
   }
 
@@ -281,9 +299,10 @@ export class MemStorage implements IStorage {
   async getMediaFilesByChat(chatExportId: number): Promise<MediaFile[]> {
     // Currently, we only track this in memory, so filter memory records
     // In a full implementation, this would search the database too
-    const mediaFiles = Array.from(this.mediaFiles.values())
-      .filter(media => media.chatExportId === chatExportId);
-    
+    const mediaFiles = Array.from(this.mediaFiles.values()).filter(
+      (media) => media.chatExportId === chatExportId,
+    );
+
     // Create an array of promises to refresh URLs
     const refreshPromises = mediaFiles.map(async (media) => {
       try {
@@ -301,11 +320,11 @@ export class MemStorage implements IStorage {
           media.url = await getSignedR2Url(media.key);
         }
       }
-      
+
       this.mediaFiles.set(media.id, media);
       return media;
     });
-    
+
     // Wait for all refreshes to complete
     return Promise.all(refreshPromises);
   }
@@ -320,7 +339,7 @@ export class MemStorage implements IStorage {
       if (mediaProxy) {
         // Convert to MediaFile format for compatibility
         const inMemoryFile = this.mediaFiles.get(mediaId);
-        
+
         if (inMemoryFile) {
           // Update the URL in the in-memory record
           inMemoryFile.url = mediaProxy.r2Url;
@@ -332,9 +351,11 @@ export class MemStorage implements IStorage {
         }
       }
     } catch (err) {
-      console.log("Media not found in database, falling back to memory storage");
+      console.log(
+        "Media not found in database, falling back to memory storage",
+      );
     }
-    
+
     // Fallback to in-memory
     const mediaFile = this.mediaFiles.get(mediaId);
     if (mediaFile && !mediaFile.url) {
@@ -347,22 +368,27 @@ export class MemStorage implements IStorage {
   /**
    * Update a message with R2 media URL
    */
-  async updateMessageMediaUrl(messageId: number, r2Key: string, r2Url: string): Promise<void> {
+  async updateMessageMediaUrl(
+    messageId: number,
+    r2Key: string,
+    r2Url: string,
+  ): Promise<void> {
     const message = this.messages.get(messageId);
     if (message) {
       // Determine the base URL of our application for absolute URLs
-      const appBaseUrl = process.env.REPLIT_DOMAINS 
+      const appBaseUrl = process.env.REPLIT_DOMAINS
         ? `https://${process.env.REPLIT_DOMAINS}`
-        : 'http://localhost:5000';
-      
+        : "http://localhost:5000";
+
       // First create or update the media proxy in the database
       let mediaProxy;
       let mediaId;
-      
+
       // Check for existing media entry
-      const existingMedia = Array.from(this.mediaFiles.values())
-        .find(m => m.messageId === messageId);
-      
+      const existingMedia = Array.from(this.mediaFiles.values()).find(
+        (m) => m.messageId === messageId,
+      );
+
       if (existingMedia) {
         // Update existing proxy
         try {
@@ -372,10 +398,10 @@ export class MemStorage implements IStorage {
             if (mediaProxy.r2Key !== r2Key) {
               await db
                 .update(mediaProxyFiles)
-                .set({ 
+                .set({
                   r2Key,
                   r2Url,
-                  lastAccessed: new Date()
+                  lastAccessed: new Date(),
                 })
                 .where(eq(mediaProxyFiles.id, existingMedia.id));
             }
@@ -385,50 +411,52 @@ export class MemStorage implements IStorage {
             mediaProxy = await mediaProxyStorage.createMediaProxy(
               r2Key,
               r2Url,
-              existingMedia.contentType
+              existingMedia.contentType,
             );
             mediaId = mediaProxy.id;
           }
         } catch (err) {
-          console.log("Failed to update existing media proxy, creating new one");
+          console.log(
+            "Failed to update existing media proxy, creating new one",
+          );
           // Determine content type from message
           let contentType = "application/octet-stream";
-          if (message.type === 'voice') {
+          if (message.type === "voice") {
             contentType = "audio/ogg";
-          } else if (message.type === 'image') {
+          } else if (message.type === "image") {
             contentType = "image/jpeg";
           }
-          
+
           // Create new media proxy
           mediaProxy = await mediaProxyStorage.createMediaProxy(
             r2Key,
             r2Url,
-            contentType
+            contentType,
           );
           mediaId = mediaProxy.id;
         }
       } else {
         // Create new media proxy
         let contentType = "application/octet-stream";
-        let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment';
-        
+        let type: "voice" | "image" | "attachment" | "pdf" = "attachment";
+
         // Determine content type and type from message
-        if (message.type === 'voice') {
+        if (message.type === "voice") {
           contentType = "audio/ogg";
-          type = 'voice';
-        } else if (message.type === 'image') {
+          type = "voice";
+        } else if (message.type === "image") {
           contentType = "image/jpeg";
-          type = 'image';
+          type = "image";
         }
-        
+
         // Create new media proxy
         mediaProxy = await mediaProxyStorage.createMediaProxy(
           r2Key,
           r2Url,
-          contentType
+          contentType,
         );
         mediaId = mediaProxy.id;
-        
+
         // Also create in-memory media file
         const mediaFile: MediaFile = {
           id: mediaId,
@@ -440,21 +468,41 @@ export class MemStorage implements IStorage {
           size: 0, // We don't know the size
           uploadedAt: new Date().toISOString(),
           url: r2Url,
-          type
+          type,
         };
-        
+
         this.mediaFiles.set(mediaId, mediaFile);
       }
-      
+
       // Use a proxy URL that points to our server endpoint
       const proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`;
-      console.log(`Setting message ${messageId} media URL to proxy: ${proxyUrl}`);
-      
+      console.log(
+        `Setting message ${messageId} media URL to proxy: ${proxyUrl}`,
+      );
+
       // Update the message with the proxy URL
       message.mediaUrl = proxyUrl;
       this.messages.set(messageId, message);
     }
   }
+
+  async updateMessageProxyUrl(
+    messageId: number,
+    proxyUrl: string,
+  ): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (message) {
+      message.mediaUrl = proxyUrl;
+      this.messages.set(messageId, message);
+      console.log(
+        `[MemStorage] Updated message ${messageId} mediaUrl to ${proxyUrl}`,
+      );
+    } else {
+      console.warn(
+        `[MemStorage] Message ${messageId} not found for updating proxy URL.`,
+      );
+    }
+  }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

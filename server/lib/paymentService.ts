@@ -1,22 +1,25 @@
-import Stripe from 'stripe';
-import { db } from '../db';
-import { paymentBundles, insertPaymentBundleSchema, PaymentBundle, Message as SchemaMessage } from '../../shared/schema';
-import { eq, and, lt, isNull } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
-import { storage } from '../storage';
-import { generatePdf } from './pdf';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { ChatExport, Message, ProcessingOptions } from '../../shared/types';
+import Stripe from "stripe";
+import { db } from "../db";
+import { paymentBundles, PaymentBundle } from "../../shared/schema"; // Removed unused imports like insertPaymentBundleSchema, SchemaMessage
+import { eq, and, lt, isNull } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
+import { storage } from "../storage"; // Assuming storage implements IStorage
+import { generatePdf } from "./pdf";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import { ChatExport, Message } from "../../shared/types"; // Using types from shared/types
 
 // Ensure Stripe API key is available
 if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('STRIPE_SECRET_KEY environment variable is not set');
+  console.error("STRIPE_SECRET_KEY environment variable is not set");
+  // Consider throwing an error or exiting in a real application if Stripe is essential
 }
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2023-10-16", // Use a specific API version
+});
 
 export class PaymentService {
   /**
@@ -24,33 +27,31 @@ export class PaymentService {
    * @param chatExportId The ID of the chat export
    * @param messageCount Number of messages in the chat
    * @param mediaSizeBytes Total size of media files in bytes
-   * @param originalFileMediaId ID of the original chat file stored in R2 (optional)
+   * @param originalFileMediaId ID of the original chat file stored in R2 (optional, kept for potential future use but not for reprocessing)
    * @returns Created payment bundle
    */
   async createPaymentBundle(
     chatExportId: number,
     messageCount: number,
     mediaSizeBytes: number,
-    originalFileMediaId?: string
+    originalFileMediaId?: string, // Keeping this parameter for potential future metadata, but not using it for reprocessing
   ): Promise<PaymentBundle> {
-    // Generate a unique bundle ID
     const bundleId = uuidv4();
-    
-    // Create the bundle record
-    const bundle = await db.insert(paymentBundles)
+
+    const [bundle] = await db
+      .insert(paymentBundles)
       .values({
         bundleId,
         chatExportId,
         messageCount,
         mediaSizeBytes,
-        originalFileMediaId,
+        originalFileMediaId, // Store it if provided
         paidAt: null,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
         createdAt: new Date(),
       })
-      .returning()
-      .then(rows => rows[0]);
-    
+      .returning();
+
     return bundle;
   }
 
@@ -60,11 +61,11 @@ export class PaymentService {
    * @returns Payment bundle or undefined if not found
    */
   async getPaymentBundle(bundleId: string): Promise<PaymentBundle | undefined> {
-    const bundle = await db.select()
+    const [bundle] = await db
+      .select()
       .from(paymentBundles)
-      .where(eq(paymentBundles.bundleId, bundleId))
-      .then(rows => rows[0]);
-    
+      .where(eq(paymentBundles.bundleId, bundleId));
+
     return bundle;
   }
 
@@ -74,15 +75,16 @@ export class PaymentService {
    * @returns Updated payment bundle or undefined if not found
    */
   async markBundleAsPaid(bundleId: string): Promise<PaymentBundle | undefined> {
-    const bundle = await db.update(paymentBundles)
+    const [bundle] = await db
+      .update(paymentBundles)
       .set({
         paidAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        // Extend expiry significantly after payment (e.g., 30 days for download)
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       })
       .where(eq(paymentBundles.bundleId, bundleId))
-      .returning()
-      .then(rows => rows[0]);
-    
+      .returning();
+
     return bundle;
   }
 
@@ -96,505 +98,353 @@ export class PaymentService {
   async createCheckoutSession(
     bundleId: string,
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
   ): Promise<string> {
-    // Get the bundle details
     const bundle = await this.getPaymentBundle(bundleId);
     if (!bundle) {
       throw new Error(`Payment bundle with ID ${bundleId} not found`);
     }
-    
-    // Create a Stripe checkout session
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'] as any, // Typecasting to avoid TypeScript error
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: "usd",
             product_data: {
-              name: 'WhatsApp Chat Export',
-              description: `${bundle.messageCount || 0} messages and ${((bundle.mediaSizeBytes || 0) / (1024 * 1024)).toFixed(1)} MB of media`,
+              name: "WhatsApp Chat PDF Export", // More specific name
+              description: `Transcript with ${bundle.messageCount || 0} messages and ${((bundle.mediaSizeBytes || 0) / (1024 * 1024)).toFixed(1)} MB media`,
             },
-            unit_amount: 900, // $9.00 in cents
+            unit_amount: 900, // $9.00 in cents (Adjust as needed)
           },
           quantity: 1,
         },
       ],
-      mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: bundleId,
+      mode: "payment",
+      success_url: successUrl, // Use dynamic success URL
+      cancel_url: cancelUrl, // Use dynamic cancel URL
+      client_reference_id: bundleId, // Link session to bundle
       metadata: {
-        bundleId,
-        chatExportId: bundle.chatExportId?.toString() || '',
+        bundleId: bundleId,
+        chatExportId: bundle.chatExportId?.toString() || "", // Include chat ID in metadata
       },
+      // Consider adding automatic tax calculation if applicable
+      // automatic_tax: { enabled: true },
+      // Consider collecting billing address if needed for tax/fraud
+      // billing_address_collection: 'required',
     });
-    
-    return session.url || '';
+
+    if (!session.url) {
+      throw new Error("Stripe session URL not generated.");
+    }
+    return session.url;
   }
 
-  // We don't need the verifyWebhookSignature method anymore
-  // as we're handling it directly in the routes
-
   /**
-   * Handle a Stripe checkout.session.completed event
+   * Handle a Stripe 'checkout.session.completed' event after signature verification.
    * @param sessionId The Stripe checkout session ID
-   * @returns Updated payment bundle or undefined if not found
+   * @returns Updated payment bundle or undefined if not found or error occurs
    */
-  async handleCheckoutSessionCompleted(sessionId: string): Promise<PaymentBundle | undefined> {
+  async handleCheckoutSessionCompleted(
+    sessionId: string,
+  ): Promise<PaymentBundle | undefined> {
     try {
-      console.log(`Retrieving Stripe session ${sessionId}`);
-      
-      // Retrieve the session
+      console.log(
+        `[PaymentService] Handling checkout.session.completed for session: ${sessionId}`,
+      );
+
+      // Retrieve the session details from Stripe (already verified by webhook handler)
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-      
-      console.log(`Session retrieved, payment_status=${session.payment_status}, customer=${session.customer}`);
-      
-      // Get the bundle ID from metadata or client_reference_id
-      let bundleId = session.metadata?.bundleId;
-      
-      // If not in metadata, try client_reference_id (older sessions may use this)
-      if (!bundleId && session.client_reference_id) {
-        bundleId = session.client_reference_id;
-        console.log(`Using client_reference_id for bundleId: ${bundleId}`);
-      }
-      
+
+      // Extract bundleId (prefer metadata, fallback to client_reference_id)
+      const bundleId =
+        session.metadata?.bundleId || session.client_reference_id;
       if (!bundleId) {
-        console.error('No bundleId found in session metadata or client_reference_id', {
-          sessionId: session.id,
-          metadata: session.metadata,
-          clientReferenceId: session.client_reference_id
-        });
-        return undefined;
+        console.error(
+          `[PaymentService] CRITICAL: No bundleId found in session metadata or client_reference_id for session ${sessionId}`,
+        );
+        return undefined; // Cannot proceed without bundleId
       }
-      
-      console.log(`Processing payment for bundle ${bundleId}`);
-      
-      // Check if bundle exists before marking as paid
+
+      console.log(
+        `[PaymentService] Processing payment completion for bundle ${bundleId}`,
+      );
+
+      // Get the bundle from DB
       const existingBundle = await this.getPaymentBundle(bundleId);
       if (!existingBundle) {
-        console.error(`Bundle ${bundleId} not found in database`);
+        console.error(
+          `[PaymentService] Bundle ${bundleId} referenced by session ${sessionId} not found in database.`,
+        );
+        // Consider creating a notification/alert here for investigation
         return undefined;
       }
-      
-      console.log(`Existing bundle found: chatExportId=${existingBundle.chatExportId}, paidAt=${existingBundle.paidAt}`);
-      
-      // If already paid, just return the bundle
+
+      // Idempotency Check: If already marked as paid, ensure PDF is linked and return
       if (existingBundle.paidAt) {
-        console.log(`Bundle ${bundleId} already marked as paid at ${existingBundle.paidAt}`);
-        // Ensure PDF URL is populated even if already paid (idempotency)
-        await this.ensurePdfGeneratedAndLinked(existingBundle);
+        console.log(
+          `[PaymentService] Bundle ${bundleId} already marked as paid at ${existingBundle.paidAt}. Ensuring PDF link.`,
+        );
+        await this.ensurePdfGeneratedAndLinked(existingBundle); // Ensure PDF is ready even if already paid
         return existingBundle;
       }
-      
-      // Mark the bundle as paid FIRST
+
+      // Mark the bundle as paid in the database
       const updatedBundle = await this.markBundleAsPaid(bundleId);
       if (!updatedBundle) {
-        console.error(`Failed to mark bundle ${bundleId} as paid`);
-        return undefined; // Stop if marking as paid failed
+        console.error(
+          `[PaymentService] Failed to mark bundle ${bundleId} as paid in the database.`,
+        );
+        return undefined; // Stop if update failed
       }
-      console.log(`Bundle ${bundleId} marked as paid successfully.`);
+      console.log(
+        `[PaymentService] Bundle ${bundleId} successfully marked as paid.`,
+      );
 
-      // --- START: Generate and Link PDF AFTER marking as paid ---
+      // Generate and link the final PDF *after* marking as paid
       await this.ensurePdfGeneratedAndLinked(updatedBundle);
-      // --- END: Generate and Link PDF AFTER marking as paid ---
-      
+
       return updatedBundle;
     } catch (error) {
-      console.error('Error handling checkout session completed:', error);
-      return undefined;
+      console.error(
+        `[PaymentService] Error handling checkout session completed event for session ${sessionId}:`,
+        error,
+      );
+      // Depending on the error type, you might want specific handling (e.g., retries for network issues)
+      return undefined; // Indicate failure
     }
   }
-  
+
   /**
    * Ensures the final PDF for a paid bundle is generated, uploaded, and linked.
-   * This is idempotent - safe to call even if already done.
+   * This function is designed to be idempotent. It fetches data directly from
+   * the database, assuming the pre-payment processing correctly stored chat
+   * details, messages, and media proxy URLs.
+   *
    * @param bundle The payment bundle (must be marked as paid)
-   * @returns ChatExport data with messages when recovery is successful, void otherwise
    */
-  private async ensurePdfGeneratedAndLinked(bundle: PaymentBundle): Promise<ChatExport | void> {
+  private async ensurePdfGeneratedAndLinked(
+    bundle: PaymentBundle,
+  ): Promise<void> {
+    // Return type changed to void as it primarily performs actions
     if (!bundle.paidAt) {
-      console.warn(`ensurePdfGeneratedAndLinked called for unpaid bundle ${bundle.bundleId}. Skipping.`);
+      console.warn(
+        `[PaymentService] ensurePdfGeneratedAndLinked called for unpaid bundle ${bundle.bundleId}. Skipping.`,
+      );
       return;
     }
     if (!bundle.chatExportId) {
-      console.error(`Cannot generate PDF for bundle ${bundle.bundleId}: chatExportId is missing.`);
+      console.error(
+        `[PaymentService] Cannot generate PDF for bundle ${bundle.bundleId}: chatExportId is missing.`,
+      );
       return;
     }
 
-    try {
-      const chatExportId = bundle.chatExportId;
-      console.log(`Ensuring PDF exists and is linked for paid chat export ${chatExportId}`);
+    const chatExportId = bundle.chatExportId;
+    console.log(
+      `[PaymentService] Ensuring PDF exists and is linked for paid chat export ${chatExportId}`,
+    );
 
-      // Fetch chat export, check if PDF URL already exists and is valid
+    try {
+      // 1. Fetch ChatExport details
       const chatExport = await storage.getChatExport(chatExportId);
       if (!chatExport) {
-        console.error(`ChatExport ${chatExportId} not found during PDF generation for bundle ${bundle.bundleId}.`);
+        // This is critical if it happens after payment. Log / Alert needed.
+        console.error(
+          `[PaymentService] CRITICAL: ChatExport ${chatExportId} not found for paid bundle ${bundle.bundleId}.`,
+        );
         return;
       }
 
-      // Check if a valid PDF URL pointing to our proxy already exists
-      if (chatExport.pdfUrl && chatExport.pdfUrl.includes('/api/media/proxy/')) {
-        // Attempt to resolve the proxy URL to check if the media file exists
+      // 2. Check if a valid PDF (linked via proxy) already exists
+      if (
+        chatExport.pdfUrl &&
+        chatExport.pdfUrl.includes("/api/media/proxy/")
+      ) {
         try {
-          const mediaId = chatExport.pdfUrl.split('/').pop();
+          const mediaId = chatExport.pdfUrl.split("/").pop();
           if (mediaId) {
             const mediaFile = await storage.getMediaFile(mediaId);
-            // Check if it looks like the main generated PDF
-            if (mediaFile && (mediaFile.originalName === 'MAIN_GENERATED_PDF' || mediaFile.type === 'pdf')) {
-              console.log(`PDF URL ${chatExport.pdfUrl} already exists and seems valid for chat ${chatExportId}. Skipping regeneration.`);
-              return; // Assume it's correct and skip regeneration
+            // Check if the existing PDF seems to be the main generated transcript
+            if (
+              mediaFile &&
+              (mediaFile.originalName === "MAIN_GENERATED_PDF" ||
+                (mediaFile.type === "pdf" &&
+                  mediaFile.fileHash?.startsWith("MAIN_PDF_")))
+            ) {
+              console.log(
+                `[PaymentService] Valid PDF URL ${chatExport.pdfUrl} already exists for chat ${chatExportId}. Skipping regeneration.`,
+              );
+              return; // PDF seems correct, nothing more to do.
             } else {
-              console.log(`Existing PDF URL ${chatExport.pdfUrl} points to non-main PDF or missing media. Regenerating.`);
+              console.log(
+                `[PaymentService] Existing PDF URL ${chatExport.pdfUrl} for chat ${chatExportId} seems invalid or is not the main transcript. Regenerating PDF.`,
+              );
             }
           }
         } catch (e) {
-          console.log(`Error verifying existing PDF URL ${chatExport.pdfUrl}. Regenerating. Error: ${e}`);
+          console.log(
+            `[PaymentService] Error verifying existing PDF URL ${chatExport.pdfUrl}. Regenerating. Error: ${e}`,
+          );
         }
       } else {
-        console.log(`No valid PDF URL found for chat ${chatExportId}. Generating PDF.`);
+        console.log(
+          `[PaymentService] No valid PDF proxy URL found for chat ${chatExportId}. Proceeding with PDF generation.`,
+        );
       }
 
-      // --- START: NEW SIMPLER APPROACH - REPROCESS THE ORIGINAL FILE ---
-      // Check if we have a reference to the original file in R2
-      if (bundle.originalFileMediaId) {
-        console.log(`Found original file media ID ${bundle.originalFileMediaId} in bundle. Using it to reprocess the chat.`);
-        try {
-          // Get the media file details
-          const originalFileMedia = await storage.getMediaFile(bundle.originalFileMediaId);
-          
-          if (!originalFileMedia) {
-            throw new Error(`Original chat file not found for mediaId: ${bundle.originalFileMediaId}`);
-          }
-          
-          console.log(`Found original chat file in R2 storage: ${originalFileMedia.key}`);
-          
-          // Get presigned URL for downloading the original file
-          const presignedUrl = await storage.getMediaUrl(bundle.originalFileMediaId);
-          
-          if (!presignedUrl) {
-            throw new Error(`Could not generate presigned URL for original chat file`);
-          }
-          
-          // Download the file to a temporary location
-          const tempDir = path.join(os.tmpdir(), 'whatspdf', 'paid-downloads');
-          fs.mkdirSync(tempDir, { recursive: true });
-          
-          const tempFilePath = path.join(tempDir, `original_${bundle.bundleId}.zip`);
-          
-          console.log(`Downloading original chat file from R2 to ${tempFilePath}`);
-          
-          const response = await fetch(presignedUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to download original file: ${response.status} ${response.statusText}`);
-          }
-          
-          const fileBuffer = await response.arrayBuffer();
-          fs.writeFileSync(tempFilePath, Buffer.from(fileBuffer));
-          
-          console.log(`Successfully downloaded original chat file to ${tempFilePath}`);
-          
-          // Now process the file just like in the uploadController
-          console.log(`Reprocessing original chat file for paid bundle ${bundle.bundleId}`);
-          
-          // Get the original processing options from the chat export
-          const originalOptions = chatExport.processingOptions || {
-            includeVoiceMessages: true,
-            includeTimestamps: true,
-            highlightSenders: true,
-            includeImages: true,
-            includeAttachments: true
-          };
-          
-          // Parse the file
-          const { parse } = await import('../lib/parser');
-          console.log(`Starting parse for paid bundle file: ${tempFilePath}`);
-          
-          const reparsedChatData = await parse(tempFilePath, originalOptions);
-          console.log(`Reparsed chat data has ${reparsedChatData.messages.length} messages`);
-          
-          // Update the chat data with the file hash and other properties
-          reparsedChatData.fileHash = chatExport.fileHash;
-          reparsedChatData.originalFilename = chatExport.originalFilename;
-          reparsedChatData.processingOptions = originalOptions;
-          reparsedChatData.id = chatExportId;
-          
-          // Clean old messages from this chat if they exist
-          try {
-            // This is not implemented in the current storage interface, so we'll just log it
-            console.log(`Would delete old messages for chat ${chatExportId} here (not implemented)`);
-          } catch (err) {
-            console.log(`Error cleaning old messages (not critical): ${err}`);
-          }
-          
-          // Save the messages from the reparsed chat data
-          console.log(`Saving ${reparsedChatData.messages.length} messages from reparsed chat data`);
-          
-          // First, clear existing messages for this chat (not implemented, would be done here)
-          
-          for (const message of reparsedChatData.messages) {
-            try {
-              await storage.saveMessage({
-                chatExportId,
-                timestamp: message.timestamp,
-                sender: message.sender,
-                content: message.content,
-                type: message.type,
-                mediaUrl: message.mediaUrl,
-                duration: message.duration
-              });
-            } catch (err) {
-              console.error(`Error saving reparsed message: ${err}`);
-            }
-          }
-          
-          // Fetch the messages to verify they were saved
-          const updatedMessages = await storage.getMessagesByChatExportId(chatExportId);
-          console.log(`Verified ${updatedMessages.length} messages saved after reprocessing`);
-          
-          if (updatedMessages.length > 0) {
-            // Convert timestamps to strings for PDF generation
-            const normalizedMessages = updatedMessages.map(msg => ({
-              ...msg,
-              timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date
-                ? msg.timestamp.toISOString()
-                : String(msg.timestamp)
-            }));
-            
-            // Update the full chat data for PDF generation
-            // @ts-ignore - Type mismatch is expected here, we're normalizing message formats
-            reparsedChatData.messages = normalizedMessages;
-            
-            // Clean up temporary file
-            try {
-              fs.unlinkSync(tempFilePath);
-              console.log(`Cleaned up temporary file: ${tempFilePath}`);
-            } catch (err) {
-              console.log(`Error cleaning temporary file (non-critical): ${err}`);
-            }
-            
-            // Get the extract directory where media files are unpacked
-            const extractDir = path.join(path.dirname(tempFilePath), path.basename(tempFilePath, '.zip'));
-            
-            // Process media files if they exist
-            const mediaMessages = reparsedChatData.messages.filter(msg => 
-              msg.type === 'voice' || msg.type === 'image' || msg.type === 'attachment'
-            );
-            
-            if (mediaMessages.length > 0) {
-              console.log(`Processing ${mediaMessages.length} media files from reparsed chat`);
-              
-              // Import the findMediaPath function
-              const { findMediaPath } = await import('../controllers/uploadController');
-              
-              for (const message of mediaMessages) {
-                if (!message.mediaUrl) continue;
-                
-                try {
-                  const mediaFilename = path.basename(message.mediaUrl);
-                  const mediaPath = findMediaPath(mediaFilename, extractDir);
-                  
-                  if (mediaPath) {
-                    console.log(`Found media file: ${mediaPath}`);
-                    
-                    // Upload to R2
-                    let contentType = 'application/octet-stream';
-                    if (message.type === 'voice') contentType = 'audio/ogg';
-                    else if (message.type === 'image') {
-                      const ext = path.extname(mediaPath).toLowerCase();
-                      if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-                      else if (ext === '.png') contentType = 'image/png';
-                      else if (ext === '.gif') contentType = 'image/gif';
-                      else if (ext === '.webp') contentType = 'image/webp';
-                    }
-                    
-                    const mediaFile = await storage.uploadMediaToR2(
-                      mediaPath,
-                      contentType,
-                      chatExportId,
-                      message.id,
-                      message.type as any
-                    );
-                    
-                    console.log(`Uploaded media file to R2: ${mediaFile.key}`);
-                    
-                    // Update message with R2 URL
-                    if (message.id) {
-                      await storage.updateMessageMediaUrl(message.id, mediaFile.key, mediaFile.url!);
-                    }
-                  }
-                } catch (err) {
-                  console.error(`Error processing media file: ${err}`);
-                }
-              }
-            }
-            
-            // Return the reparsed chat data for PDF generation
-            return reparsedChatData as ChatExport;
-          }
-          
-        } catch (err) {
-          console.error(`Error reprocessing original chat file: ${err}`);
-          console.log(`Falling back to original recovery method`);
-        }
-      } else {
-        console.log(`No original file media ID found in bundle. Using fallback recovery methods.`);
-      }
-      // --- END: NEW SIMPLER APPROACH ---
-      
-      // Fallback to original method if the new approach fails or isn't available
-      
-      // Fetch messages for this chat
+      // 3. Fetch Messages directly from the database
+      // These messages should contain the correct proxy URLs set during pre-payment processing.
+      console.log(
+        `[PaymentService] Fetching messages from DB for chat ${chatExportId}...`,
+      );
       const messages = await storage.getMessagesByChatExportId(chatExportId);
-      console.log(`Retrieved ${messages.length} messages for chat ${chatExportId} to include in PDF generation`);
-      
-      // Check if we have messages
-      if (messages.length === 0) {
-        console.error(`No messages found in memory storage for chat ${chatExportId}. Using fallback recovery.`);
-        
-        try {
-          // Try to recover from bundle backup file
-          const bundleId = bundle.bundleId;
-          const chatDataBackupPath = path.join(os.tmpdir(), 'whatspdf', 'bundles', `bundle_${bundleId}.json`);
-          
-          console.log(`Attempting to recover messages from backup file: ${chatDataBackupPath}`);
-          
-          if (fs.existsSync(chatDataBackupPath)) {
-            // Read backup file
-            const backupData = JSON.parse(fs.readFileSync(chatDataBackupPath, 'utf8'));
-            
-            if (backupData.messages && backupData.messages.length > 0) {
-              console.log(`Recovered ${backupData.messages.length} messages from bundle backup file`);
-              
-              // Save messages to storage
-              for (const message of backupData.messages) {
-                try {
-                  await storage.saveMessage({
-                    chatExportId,
-                    timestamp: message.timestamp,
-                    sender: message.sender,
-                    content: message.content,
-                    type: message.type,
-                    mediaUrl: message.mediaUrl,
-                    duration: message.duration,
-                    isDeleted: message.isDeleted
-                  });
-                } catch (err) {
-                  console.error(`Error saving recovered message: ${err}`);
-                }
-              }
-              
-              // Get fresh messages for PDF generation
-              const updatedMessages = await storage.getMessagesByChatExportId(chatExportId);
-              console.log(`After recovery: ${updatedMessages.length} messages available`);
-              
-              if (updatedMessages.length > 0) {
-                // Normalize timestamp format
-                const normalizedMessages = updatedMessages.map(msg => ({
-                  ...msg,
-                  timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date
-                    ? msg.timestamp.toISOString()
-                    : String(msg.timestamp)
-                }));
-                
-                const fullChatData = {
-                  ...chatExport,
-                  messages: normalizedMessages,
-                  id: chatExportId
-                };
-                return fullChatData as ChatExport;
-              }
-            }
-          }
-        } catch (err) {
-          console.error(`Error recovering messages from backup: ${err}`);
-        }
+      console.log(
+        `[PaymentService] Retrieved ${messages.length} messages from DB for chat ${chatExportId}.`,
+      );
+
+      if (messages.length === 0 && (bundle.messageCount ?? 0) > 0) {
+        // CRITICAL: If payment happened but messages are gone from DB, this indicates a major issue.
+        console.error(
+          `[PaymentService] CRITICAL: No messages found in DB for paid chat ${chatExportId}, but bundle expected ${bundle.messageCount}. Cannot generate PDF content.`,
+        );
+        // TODO: Implement alerting / fallback mechanism (e.g., notify support).
+        // Proceeding might generate an empty PDF, which is bad UX.
+        // For now, let's stop here to prevent generating a bad PDF.
+        return;
+      } else if (messages.length > 0) {
+        console.log(
+          `[PaymentService] First message sample from DB: ID=${messages[0]?.id}, Type=${messages[0]?.type}, MediaURL=${messages[0]?.mediaUrl}`,
+        );
       }
-      
-      // Log sample of first few messages to verify content
-      if (messages.length > 0) {
-        console.log(`First message sample: ${JSON.stringify(messages[0]).substring(0, 200)}...`);
-      } else {
-        console.error(`Failed to recover messages. The PDF will be generated without message content.`);
-      }
-      
-      // Convert all message timestamps to strings for compatibility
-      const normalizedMessages = messages.map(message => ({
+
+      // 4. Prepare data for PDF Generation (Normalize Timestamps)
+      const normalizedMessages: Message[] = messages.map((message) => ({
         ...message,
-        timestamp: typeof message.timestamp === 'object' && message.timestamp instanceof Date 
-          ? message.timestamp.toISOString() 
-          : String(message.timestamp)
+        // Ensure timestamp is an ISO string for pdf-lib compatibility
+        timestamp:
+          typeof message.timestamp === "object" &&
+          message.timestamp instanceof Date
+            ? message.timestamp.toISOString()
+            : String(message.timestamp),
+        // Ensure mediaUrl is explicitly handled if potentially undefined from DB
+        mediaUrl: message.mediaUrl ?? undefined,
       }));
-      
-      const fullChatData = { 
-        ...chatExport, 
-        messages: normalizedMessages,
-        id: chatExportId  // Ensure ID is explicitly set for lookup during PDF generation
-      } as ChatExport; // Construct the full object needed by generatePdf
 
-      // Generate the final PDF
-      console.log(`Generating final PDF for chat ${chatExportId}...`);
-      const pdfResultPath = await generatePdf(fullChatData);
-      console.log(`Final PDF generated locally at: ${pdfResultPath}`);
+      // Construct the full data object needed by generatePdf
+      const fullChatData: ChatExport = {
+        ...chatExport, // Use the data fetched earlier
+        messages: normalizedMessages, // Use the messages fetched from DB
+        id: chatExportId, // Ensure ID is set
+        // Ensure processingOptions are parsed if stored as JSON string
+        processingOptions:
+          typeof chatExport.processingOptions === "string"
+            ? JSON.parse(chatExport.processingOptions)
+            : chatExport.processingOptions,
+      };
 
-      // Determine the base URL
-      const appDomain = process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : null;
-      const appBaseUrl = appDomain ? `https://${appDomain}` : 'http://localhost:5000';
+      // 5. Generate the Final PDF
+      console.log(
+        `[PaymentService] Generating final PDF for chat ${chatExportId} using data fetched from DB...`,
+      );
+      const pdfResultPath = await generatePdf(fullChatData); // Pass the correct data object
+      console.log(
+        `[PaymentService] Final PDF generated locally at: ${pdfResultPath}`,
+      );
 
-      // Upload the final PDF to R2 with specific markers
-      console.log(`Uploading final PDF to R2 for chat ${chatExportId}...`);
+      // 6. Upload Final PDF to R2
+      // Determine the application's base URL for constructing the proxy URL
+      const appDomain = process.env.REPLIT_DOMAINS
+        ? process.env.REPLIT_DOMAINS.split(",")[0]
+        : null;
+      const appBaseUrl = appDomain
+        ? `https://${appDomain}`
+        : process.env.BASE_URL || "http://localhost:5000"; // Use BASE_URL env var if available
+
+      console.log(
+        `[PaymentService] Uploading final PDF to R2 for chat ${chatExportId}...`,
+      );
       const pdfMediaFile = await storage.uploadMediaToR2(
         pdfResultPath,
-        'application/pdf',
+        "application/pdf",
         chatExportId,
         undefined, // Not linked to a specific message
-        'pdf', // Type is 'pdf' for the main transcript
-        'MAIN_GENERATED_PDF', // Use the special originalName marker
-        'MAIN_PDF_' + chatExportId // Use the special fileHash marker
+        "pdf", // Type is 'pdf' for the main transcript
+        "MAIN_GENERATED_PDF", // Special originalName marker
+        "MAIN_PDF_" + chatExportId, // Special fileHash marker
       );
-      console.log(`Final PDF uploaded to R2: key=${pdfMediaFile.key}, id=${pdfMediaFile.id}`);
+      console.log(
+        `[PaymentService] Final PDF uploaded to R2: key=${pdfMediaFile.key}, id=${pdfMediaFile.id}`,
+      );
 
-      // Generate the proxy URL for the PDF
+      // 7. Generate Proxy URL and Save to ChatExport
       const finalPdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`;
-      console.log(`Generated final PDF proxy URL: ${finalPdfUrl}`);
+      console.log(
+        `[PaymentService] Generated final PDF proxy URL: ${finalPdfUrl}`,
+      );
 
-      // Save the final PDF proxy URL to the chat export record
       await storage.savePdfUrl(chatExportId, finalPdfUrl);
-      console.log(`Successfully saved final PDF URL for chat export ${chatExportId}`);
+      console.log(
+        `[PaymentService] Successfully saved final PDF URL for chat export ${chatExportId}`,
+      );
 
-      // Optional: Clean up the local PDF file
+      // 8. Cleanup Local PDF File
       try {
-        fs.unlinkSync(pdfResultPath);
-        console.log(`Cleaned up local PDF: ${pdfResultPath}`);
+        if (fs.existsSync(pdfResultPath)) {
+          fs.unlinkSync(pdfResultPath);
+          console.log(
+            `[PaymentService] Cleaned up temporary local PDF: ${pdfResultPath}`,
+          );
+        }
       } catch (err) {
-        console.error(`Error cleaning up local PDF ${pdfResultPath}:`, err);
+        console.error(
+          `[PaymentService] Error cleaning up local PDF ${pdfResultPath}:`,
+          err,
+        );
+        // Non-critical error, just log it.
       }
     } catch (error) {
-      console.error(`CRITICAL ERROR generating/linking PDF for paid bundle ${bundle.bundleId} (Chat ${bundle.chatExportId}):`, error);
-      // Payment is processed, but the PDF might be missing
+      // Catch-all for errors during PDF generation/linking
+      console.error(
+        `[PaymentService] CRITICAL ERROR during final PDF generation/linking for paid bundle ${bundle.bundleId} (Chat ${chatExportId}):`,
+        error,
+      );
+      // TODO: Implement robust error handling/alerting here. Payment is done, but PDF delivery failed.
     }
   }
 
   /**
-   * Clean up expired unpaid bundles
-   * @returns Number of bundles deleted
+   * Clean up expired unpaid bundles from the database.
+   * @returns Number of bundles deleted.
    */
   async cleanupExpiredBundles(): Promise<number> {
     const now = new Date();
-    
-    const deletedBundles = await db.delete(paymentBundles)
-      .where(
-        // Delete bundles that are expired and not paid
-        and(
-          isNull(paymentBundles.paidAt),
-          lt(paymentBundles.expiresAt, now)
+    try {
+      const deletedBundles = await db
+        .delete(paymentBundles)
+        .where(
+          and(
+            isNull(paymentBundles.paidAt), // Bundle is not paid
+            lt(paymentBundles.expiresAt, now), // Expiry date is in the past
+          ),
         )
-      )
-      .returning();
-    
-    return deletedBundles.length;
+        .returning(); // Return the deleted records (or just count)
+
+      if (deletedBundles.length > 0) {
+        console.log(
+          `[PaymentService] Cleaned up ${deletedBundles.length} expired unpaid payment bundles.`,
+        );
+      }
+      return deletedBundles.length;
+    } catch (error) {
+      console.error(
+        "[PaymentService] Error during cleanup of expired bundles:",
+        error,
+      );
+      return 0; // Return 0 on error
+    }
   }
 }
 
-// Create a singleton instance
+// Create and export a singleton instance
 export const paymentService = new PaymentService();
