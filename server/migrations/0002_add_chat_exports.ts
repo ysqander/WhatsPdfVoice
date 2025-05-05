@@ -1,5 +1,11 @@
-
 import { integer, pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+
+export const processingProgress = pgTable("processing_progress", {
+  clientId: text("client_id").primaryKey(),
+  progress: integer("progress").notNull(),
+  step: integer("step"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const messages = pgTable("messages", {
   id: integer("id").primaryKey(),

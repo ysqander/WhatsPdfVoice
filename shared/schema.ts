@@ -2,6 +2,14 @@ import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Processing progress table
+export const processingProgress = pgTable("processing_progress", {
+  clientId: text("client_id").primaryKey(),
+  progress: integer("progress").notNull(),
+  step: integer("step"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Messages table
 export const messages = pgTable("messages", {
   id: integer("id").primaryKey(),
