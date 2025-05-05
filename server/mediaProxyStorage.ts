@@ -57,8 +57,16 @@ export class MediaProxyStorage {
       .where(eq(mediaProxyFiles.id, id));
 
     if (!mediaProxy) {
+      console.error(`No media proxy found with ID: ${id}`);
       return undefined;
     }
+
+    console.log(`Found media proxy record: ${JSON.stringify({
+      id: mediaProxy.id,
+      r2Key: mediaProxy.r2Key,
+      contentType: mediaProxy.contentType,
+      createdAt: mediaProxy.createdAt
+    })}`);
 
     // Update last accessed time
     await db
@@ -66,16 +74,9 @@ export class MediaProxyStorage {
       .set({ lastAccessed: new Date() })
       .where(eq(mediaProxyFiles.id, id));
 
-    // Check if we need to refresh the URL (if it's close to expiring)
-    // AWS SDK signed URLs typically last 7 days, so we'll refresh
-    // if the URL is more than 6 days old
-    const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
-    const lastModified = mediaProxy.lastAccessed ? new Date(mediaProxy.lastAccessed) : new Date();
-    const now = new Date();
-    const ageMs = now.getTime() - lastModified.getTime();
-
-    if (ageMs > SIX_DAYS_MS) {
-      // Refresh the URL
+    // Always refresh the URL to ensure it's valid
+    try {
+      console.log(`Generating fresh signed URL for R2 key: ${mediaProxy.r2Key}`);
       const newSignedUrl = await getSignedR2Url(mediaProxy.r2Key);
       
       // Update in database
@@ -86,9 +87,13 @@ export class MediaProxyStorage {
       
       // Return updated proxy
       mediaProxy.r2Url = newSignedUrl;
+      console.log(`Successfully refreshed R2 URL for key: ${mediaProxy.r2Key}`);
+      return mediaProxy;
+    } catch (error) {
+      console.error(`Error generating signed URL for R2 key ${mediaProxy.r2Key}:`, error);
+      // Return the existing URL even if refresh failed
+      return mediaProxy;
     }
-
-    return mediaProxy;
   }
 
   /**
