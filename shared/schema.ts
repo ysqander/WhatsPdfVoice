@@ -2,6 +2,17 @@ import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Chat exports table
+export const chatExports = pgTable("chat_exports", {
+  id: integer("id").primaryKey(),
+  originalFilename: text("original_filename").notNull(),
+  fileHash: text("file_hash").notNull(),
+  participants: text("participants").array(),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  pdfUrl: text("pdf_url"),
+  processingOptions: text("processing_options").notNull()
+});
+
 // Media proxy files table - only storing essential information for our proxy
 export const mediaProxyFiles = pgTable("media_proxy_files", {
   id: uuid("id").primaryKey().defaultRandom(), // The mediaId that will be used in proxy URLs
