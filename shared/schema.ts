@@ -2,6 +2,21 @@ import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Media files table
+export const mediaFiles = pgTable("media_files", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull(),
+  chatExportId: integer("chat_export_id"),
+  messageId: integer("message_id"),
+  originalName: text("original_name"),
+  contentType: text("content_type").notNull(),
+  size: integer("size"),
+  url: text("url"),
+  type: text("type"), // 'voice' | 'image' | 'attachment' | 'pdf'
+  fileHash: text("file_hash"),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
 // Chat exports table
 export const chatExports = pgTable("chat_exports", {
   id: integer("id").primaryKey(),
