@@ -177,12 +177,13 @@ export class DatabaseStorage implements IStorage {
     chatExportId: number,
     messageId?: number,
     type: "voice" | "image" | "attachment" | "pdf" = "attachment",
-    expiresIn?: number,
+    originalName?: string,
+    fileHash?: string,
   ): Promise<MediaFile> {
     try {
       // Get file stats for size
       const stats = fs.statSync(filePath);
-      const originalName = path.basename(filePath);
+      const fileName = originalName || path.basename(filePath);
 
       // Generate R2 key using directory structure for organization
       const typeFolder =
@@ -194,21 +195,25 @@ export class DatabaseStorage implements IStorage {
               ? "pdf"
               : "attachments";
 
-      const fileName = originalName.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
       const uniqueSuffix = uuidv4();
-      const key = `chats/${chatExportId}/${typeFolder}/${fileName.replace(/\s+/g, "_")}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`;
+      const key = `chats/${chatExportId}/${typeFolder}/${sanitizedFileName.replace(/\s+/g, "_")}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`;
 
       // Upload file to R2
       await uploadFileToR2(filePath, contentType, key);
       console.log(`Uploaded file to R2: ${key}`);
 
       // Get signed URL (this will expire, but our proxy system will handle that)
-      const url = await getSignedR2Url(key, expiresIn);
+      const url = await getSignedR2Url(key);
 
+      // Generate a UUID for the media file ID
+      const id = uuidv4();
+      
       // Create media file record in database
       const [mediaFile] = await db
         .insert(mediaFiles)
         .values({
+          id,
           key,
           chatExportId,
           messageId,
@@ -358,10 +363,14 @@ export class DatabaseStorage implements IStorage {
         type = "image";
       }
 
+      // Generate a UUID for the media file ID
+      const mediaFileId = uuidv4();
+      
       // Create a new media file record
       const [mediaFile] = await db
         .insert(mediaFiles)
         .values({
+          id: mediaFileId,
           key: r2Key,
           chatExportId: message.chatExportId,
           messageId,

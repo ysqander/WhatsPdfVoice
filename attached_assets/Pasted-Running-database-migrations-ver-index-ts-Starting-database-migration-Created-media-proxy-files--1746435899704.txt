@@ -1,0 +1,170 @@
+Running database migrations...ver/index.ts
+Starting database migration...
+Created media_proxy_files table
+Created payment_bundles table
+Migration completed successfully!
+Database migrations completed successfully
+8:33:27 AM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Multer processing file: {
+  originalname: 'WhatsApp Chat - more than 50 messages.zip',
+  mimetype: 'application/zip',
+  fieldname: 'file'
+}
+Upload request received: {
+  headers: {
+    host: 'eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'content-length': '438412',
+    accept: '*/*',
+    'accept-encoding': 'gzip, deflate, br, zstd',
+    'accept-language': 'en-GB,en;q=0.8',
+    'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryljO5aGxQEDBh8CYU',
+    cookie: '__stripe_mid=e9a76655-bc8c-4716-9b97-1ae2ea13c1efee7b8c; __stripe_sid=43f56835-6e74-4b95-9ccb-ce0c6e9757734af2ff',
+    origin: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    referer: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/',
+    'sec-ch-ua': '"Brave";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'x-forwarded-for': '45.155.143.100, 10.83.9.66',
+    'x-forwarded-proto': 'https',
+    'x-replit-user-bio': '',
+    'x-replit-user-id': '',
+    'x-replit-user-name': '',
+    'x-replit-user-profile-image': '',
+    'x-replit-user-roles': '',
+    'x-replit-user-teams': '',
+    'x-replit-user-url': ''
+  },
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundaryljO5aGxQEDBh8CYU',
+  file: {
+    originalname: 'WhatsApp Chat - more than 50 messages.zip',
+    size: 437973
+  },
+  body: [Object: null prototype] {
+    options: '{"includeVoiceMessages":true,"includeTimestamps":true,"highlightSenders":true,"includeImages":true,"includeAttachments":true}'
+  }
+}
+File details: {
+  originalname: 'WhatsApp Chat - more than 50 messages.zip',
+  mimetype: 'application/zip',
+  size: 437973,
+  path: '/tmp/whatspdf-uploads/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip'
+}
+Waiting for SSE connection for clientId: 9e540673-b1dc-4407-9ac8-dc8156895f5d
+9:04:36 AM [express] POST /api/whatsapp/process 200 in 571ms :: {"clientId":"9e540673-b1dc-4407-9ac8…
+SSE connection established for clientId: 9e540673-b1dc-4407-9ac8-dc8156895f5d
+Starting background processing for clientId: 9e540673-b1dc-4407-9ac8-dc8156895f5d
+Starting parse for file: /tmp/whatspdf-uploads/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip
+Looking for attachment: -0000007-AUDIO-2025-05-01-18-28-48.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Looking for attachment: -0000003-AUDIO-2025-05-01-18-31-00.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Looking for attachment: -0000001-AUDIO-2025-05-01-18-32-10.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Looking for attachment: 00000002-AUDIO-2025-05-04-10-29-03.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000002-AUDIO-2025-05-04-10-29-03.opus
+Looking for attachment: 00000004-AUDIO-2025-05-04-10-29-35.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000004-AUDIO-2025-05-04-10-29-35.opus
+Looking for attachment: 00000005-AUDIO-2025-05-04-10-29-50.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000005-AUDIO-2025-05-04-10-29-50.opus
+Looking for attachment: 00000006-AUDIO-2025-05-04-10-30-08.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000006-AUDIO-2025-05-04-10-30-08.opus
+Looking for attachment: 00000008-AUDIO-2025-05-04-10-28-20.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000008-AUDIO-2025-05-04-10-28-20.opus
+Looking for attachment: 00000010-PHOTO-2025-05-04-10-53-14.jpg in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Looking for attachment: 00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Found attachment: /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771/WhatsApp Chat - more than 50 messages/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Looking for attachment: 00000014-AUDIO-2025-05-04-11-16-48.opus in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Attachment not found: 00000014-AUDIO-2025-05-04-11-16-48.opus
+Looking for attachment: 00000015-PHOTO-2025-05-06-10-20-35.jpg in /tmp/whatspdf-temp/0cf0757f-7804-4e43-a929-ac23fb58e771
+Attachment not found: 00000015-PHOTO-2025-05-06-10-20-35.jpg
+Parsed chat export: {
+  messageCount: 85,
+  participantCount: 2,
+  firstMessageSample: {
+    timestamp: '2025-05-01T18:27:34',
+    sender: 'Iris Adamov',
+    content: 'Hi Alex, there’s mold coming back in the corner of the bedroom again. Can you please arrange for someone to look at it?',
+    type: 'text',
+    mediaUrl: undefined,
+    duration: undefined
+  },
+  options: {
+    includeVoiceMessages: true,
+    includeTimestamps: true,
+    highlightSenders: true,
+    includeImages: true,
+    includeAttachments: true
+  }
+}
+Parse completed successfully. Found 85 messages.
+Analyzing chat size. Messages: 85
+Total media size calculated: 428236 bytes (0.41MB)
+Chat exceeds free tier limits. Payment required.
+Saved 85 messages to DB before media upload (Payment Path).
+Saving original chat zip file to R2: /tmp/whatspdf-uploads/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip
+Uploaded file to R2: chats/1/attachments/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip_0be31cd3-b6e4-4f0a-a3fd-f8495eb4e70d.zip/file_1746435875546_5b6e915c_b230_4496_9a1b_9f33215aebac_857f9263-f869-4670-82e0-4024992fab20.zip
+Uploaded file to R2: chats/1/attachments/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip_0be31cd3-b6e4-4f0a-a3fd-f8495eb4e70d.zip
+Error uploading media to R2: error: null value in column "id" of relation "media_files" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.uploadMediaToR2 (/home/runner/workspace/server/databaseStorage.ts:209:27)
+    at async <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:357:50) {
+  length: 477,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (null, chats/1/attachments/file-1746435875546-5b6e915c-b230-4496-9a1b-9..., 1, null, file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip, application/zip, 437973, https://whatspdf.72e194f828a1009a2557f094fbabd3bb.r2.cloudflares..., attachment, null, 2025-05-05 09:04:39.412242).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'media_files',
+  column: 'id',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2006',
+  routine: 'ExecConstraints'
+}
+Error during payment required flow (bundle creation or media upload): error: null value in column "id" of relation "media_files" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.uploadMediaToR2 (/home/runner/workspace/server/databaseStorage.ts:209:27)
+    at async <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:357:50) {
+  length: 477,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (null, chats/1/attachments/file-1746435875546-5b6e915c-b230-4496-9a1b-9..., 1, null, file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip, application/zip, 437973, https://whatspdf.72e194f828a1009a2557f094fbabd3bb.r2.cloudflares..., attachment, null, 2025-05-05 09:04:39.412242).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'media_files',
+  column: 'id',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2006',
+  routine: 'ExecConstraints'
+}
+Error during background processing: Error: Failed during payment setup: null value in column "id" of relation "media_files" violates not-null constraint
+    at <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:565:35)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Background processing finished for 9e540673-b1dc-4407-9ac8-dc8156895f5d. Elapsed time: 3316ms
+Cleaned up uploaded file: /tmp/whatspdf-uploads/file-1746435875546-5b6e915c-b230-4496-9a1b-9f33215aebac.zip
+9:04:39 AM [express] GET /api/whatsapp/process-status 200 in 3196ms
+SSE connection closed for clientId: 9e540673-b1dc-4407-9ac8-dc8156895f5d
