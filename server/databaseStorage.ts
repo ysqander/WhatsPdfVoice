@@ -1,8 +1,8 @@
-import { db } from "./db";
-import { v4 as uuidv4 } from "uuid";
-import path from "path";
-import fs from "fs";
-import { eq, and, desc } from "drizzle-orm";
+import { db } from './db'
+import { v4 as uuidv4 } from 'uuid'
+import path from 'path'
+import fs from 'fs'
+import { eq, and, desc } from 'drizzle-orm'
 import {
   type ChatExport,
   type Message,
@@ -13,14 +13,15 @@ import {
   messages,
   mediaFiles,
   processingProgress,
-} from "@shared/schema";
-import { IStorage } from "./storage";
-import { ProcessingOptions } from "@shared/types";
+} from '@shared/schema'
+import { IStorage } from './storage'
+import { ProcessingOptions } from '@shared/types'
 import {
   getSignedR2Url,
   uploadFileToR2,
   deleteFileFromR2,
-} from "./lib/r2Storage";
+} from './lib/r2Storage'
+import { getAppBaseUrl } from './lib/appBaseUrl'
 
 export class DatabaseStorage implements IStorage {
   /**
@@ -31,20 +32,22 @@ export class DatabaseStorage implements IStorage {
     const insertData = {
       ...data,
       processingOptions: JSON.stringify(data.processingOptions),
-    };
+    }
 
     const [chatExport] = await db
       .insert(chatExports)
       .values(insertData)
-      .returning();
+      .returning()
 
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
+      participants: chatExport.participants ?? undefined,
+      generatedAt: chatExport.generatedAt ?? undefined,
+      pdfUrl: chatExport.pdfUrl ?? undefined,
       processingOptions: JSON.parse(
-        chatExport.processingOptions,
+        chatExport.processingOptions
       ) as ProcessingOptions,
-    };
+    }
   }
 
   /**
@@ -54,29 +57,47 @@ export class DatabaseStorage implements IStorage {
     const [chatExport] = await db
       .select()
       .from(chatExports)
-      .where(eq(chatExports.id, id));
+      .where(eq(chatExports.id, id))
 
-    if (!chatExport) return undefined;
+    if (!chatExport) return undefined
 
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
+      participants: chatExport.participants ?? undefined,
+      generatedAt: chatExport.generatedAt ?? undefined,
+      pdfUrl: chatExport.pdfUrl ?? undefined,
       processingOptions: JSON.parse(
-        chatExport.processingOptions,
+        chatExport.processingOptions
       ) as ProcessingOptions,
-    };
+    }
   }
 
   /**
    * Save a message
    */
   async saveMessage(message: InsertMessage): Promise<Message> {
+    const insertMessage = {
+      ...message,
+      timestamp:
+        typeof message.timestamp === 'string'
+          ? new Date(message.timestamp)
+          : message.timestamp,
+    }
     const [savedMessage] = await db
       .insert(messages)
-      .values(message)
-      .returning();
+      .values(insertMessage)
+      .returning()
 
-    return savedMessage;
+    return {
+      ...savedMessage,
+      timestamp:
+        savedMessage.timestamp instanceof Date
+          ? savedMessage.timestamp.toISOString()
+          : String(savedMessage.timestamp),
+      mediaUrl: savedMessage.mediaUrl ?? undefined,
+      duration: savedMessage.duration ?? undefined,
+      isDeleted: savedMessage.isDeleted ?? undefined,
+    }
   }
 
   /**
@@ -86,9 +107,18 @@ export class DatabaseStorage implements IStorage {
     const messagesList = await db
       .select()
       .from(messages)
-      .where(eq(messages.chatExportId, chatExportId));
+      .where(eq(messages.chatExportId, chatExportId))
 
-    return messagesList;
+    return messagesList.map((msg) => ({
+      ...msg,
+      timestamp:
+        msg.timestamp instanceof Date
+          ? msg.timestamp.toISOString()
+          : String(msg.timestamp),
+      mediaUrl: msg.mediaUrl ?? undefined,
+      duration: msg.duration ?? undefined,
+      isDeleted: msg.isDeleted ?? undefined,
+    }))
   }
 
   /**
@@ -99,17 +129,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(chatExports)
       .orderBy(desc(chatExports.generatedAt))
-      .limit(1);
+      .limit(1)
 
-    if (!chatExport) return undefined;
+    if (!chatExport) return undefined
 
     return {
       ...chatExport,
-      // Convert string back to ProcessingOptions object
+      participants: chatExport.participants ?? undefined,
+      generatedAt: chatExport.generatedAt ?? undefined,
+      pdfUrl: chatExport.pdfUrl ?? undefined,
       processingOptions: JSON.parse(
-        chatExport.processingOptions,
+        chatExport.processingOptions
       ) as ProcessingOptions,
-    };
+    }
   }
 
   /**
@@ -118,7 +150,7 @@ export class DatabaseStorage implements IStorage {
   async saveProcessingProgress(
     clientId: string,
     progress: number,
-    step?: number,
+    step?: number
   ): Promise<void> {
     await db
       .insert(processingProgress)
@@ -134,7 +166,7 @@ export class DatabaseStorage implements IStorage {
           step,
           updatedAt: new Date(),
         },
-      });
+      })
   }
 
   /**
@@ -142,24 +174,23 @@ export class DatabaseStorage implements IStorage {
    * Note: This is implemented as a synchronous function to match the interface,
    * but internally uses a cached value to avoid blocking
    */
-  getProcessingProgress(
-    clientId: string,
-  ): { progress: number; step?: number } {
+  getProcessingProgress(clientId: string): { progress: number; step?: number } {
     // Start a non-blocking query to update the cached value for next time
-    this._refreshProcessingProgressCache(clientId);
-    
+    this._refreshProcessingProgressCache(clientId)
+
     // Use the cached progress or default to 0
-    const cachedProgress = this._progressCache.get(clientId);
+    const cachedProgress = this._progressCache.get(clientId)
     if (cachedProgress) {
-      return cachedProgress;
+      return cachedProgress
     }
-    
-    return { progress: 0 };
+
+    return { progress: 0 }
   }
-  
+
   // Cache for progress values
-  private _progressCache: Map<string, { progress: number; step?: number }> = new Map();
-  
+  private _progressCache: Map<string, { progress: number; step?: number }> =
+    new Map()
+
   // Helper method to refresh the cache asynchronously
   private _refreshProcessingProgressCache(clientId: string): void {
     db.select()
@@ -168,14 +199,14 @@ export class DatabaseStorage implements IStorage {
       .then(([progress]) => {
         if (progress) {
           this._progressCache.set(clientId, {
-            progress: progress.progress,
-            step: progress.step,
-          });
+            progress: progress.progress ?? 0,
+            step: progress.step ?? undefined,
+          })
         }
       })
-      .catch(error => {
-        console.error(`Error refreshing progress cache for ${clientId}:`, error);
-      });
+      .catch((error) => {
+        console.error(`Error refreshing progress cache for ${clientId}:`, error)
+      })
   }
 
   /**
@@ -185,7 +216,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(chatExports)
       .set({ pdfUrl })
-      .where(eq(chatExports.id, chatExportId));
+      .where(eq(chatExports.id, chatExportId))
   }
 
   /**
@@ -196,39 +227,42 @@ export class DatabaseStorage implements IStorage {
     contentType: string,
     chatExportId: number,
     messageId?: number,
-    type: "voice" | "image" | "attachment" | "pdf" = "attachment",
+    type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment',
     originalName?: string,
-    fileHash?: string,
+    fileHash?: string
   ): Promise<MediaFile> {
     try {
       // Get file stats for size
-      const stats = fs.statSync(filePath);
-      const fileName = originalName || path.basename(filePath);
+      const stats = fs.statSync(filePath)
+      const fileName = originalName || path.basename(filePath)
 
       // Generate R2 key using directory structure for organization
       const typeFolder =
-        type === "voice"
-          ? "voice"
-          : type === "image"
-            ? "images"
-            : type === "pdf"
-              ? "pdf"
-              : "attachments";
+        type === 'voice'
+          ? 'voice'
+          : type === 'image'
+          ? 'images'
+          : type === 'pdf'
+          ? 'pdf'
+          : 'attachments'
 
-      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-      const uniqueSuffix = uuidv4();
-      const key = `chats/${chatExportId}/${typeFolder}/${sanitizedFileName.replace(/\s+/g, "_")}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`;
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, '_')
+      const uniqueSuffix = uuidv4()
+      const key = `chats/${chatExportId}/${typeFolder}/${sanitizedFileName.replace(
+        /\s+/g,
+        '_'
+      )}_${uniqueSuffix}.${path.extname(filePath).slice(1)}`
 
       // Upload file to R2
-      await uploadFileToR2(filePath, contentType, key);
-      console.log(`Uploaded file to R2: ${key}`);
+      await uploadFileToR2(filePath, contentType, key)
+      console.log(`Uploaded file to R2: ${key}`)
 
       // Get signed URL (this will expire, but our proxy system will handle that)
-      const url = await getSignedR2Url(key);
+      const url = await getSignedR2Url(key)
 
       // Generate a UUID for the media file ID
-      const id = uuidv4();
-      
+      const id = uuidv4()
+
       // Create media file record in database
       const [mediaFile] = await db
         .insert(mediaFiles)
@@ -242,14 +276,35 @@ export class DatabaseStorage implements IStorage {
           size: stats.size,
           url,
           type,
+          ...(fileHash ? { fileHash } : {}),
+          uploadedAt: new Date(),
         })
-        .returning();
+        .returning()
 
-      console.log(`Uploaded media file to R2: ${key}`);
-      return mediaFile;
+      console.log(`Uploaded media file to R2: ${key}`)
+      return {
+        ...mediaFile,
+        chatExportId: mediaFile.chatExportId ?? undefined,
+        messageId: mediaFile.messageId ?? undefined,
+        originalName: mediaFile.originalName ?? undefined,
+        size: mediaFile.size ?? undefined,
+        url: mediaFile.url ?? undefined,
+        type: mediaFile.type as
+          | 'voice'
+          | 'image'
+          | 'attachment'
+          | 'pdf'
+          | undefined,
+        fileHash: mediaFile.fileHash ?? undefined,
+        uploadedAt: mediaFile.uploadedAt
+          ? mediaFile.uploadedAt instanceof Date
+            ? mediaFile.uploadedAt.toISOString()
+            : String(mediaFile.uploadedAt)
+          : undefined,
+      }
     } catch (error) {
-      console.error("Error uploading media to R2:", error);
-      throw error;
+      console.error('Error uploading media to R2:', error)
+      throw error
     }
   }
 
@@ -261,22 +316,22 @@ export class DatabaseStorage implements IStorage {
     const [mediaFile] = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.id, mediaId));
+      .where(eq(mediaFiles.id, mediaId))
 
     if (!mediaFile) {
-      throw new Error(`Media file with ID ${mediaId} not found`);
+      throw new Error(`Media file with ID ${mediaId} not found`)
     }
 
     // Generate a fresh signed URL with a new expiration
-    const freshUrl = await getSignedR2Url(mediaFile.key);
+    const freshUrl = await getSignedR2Url(mediaFile.key)
 
     // Update the URL in the database
     await db
       .update(mediaFiles)
       .set({ url: freshUrl })
-      .where(eq(mediaFiles.id, mediaId));
+      .where(eq(mediaFiles.id, mediaId))
 
-    return freshUrl;
+    return freshUrl
   }
 
   /**
@@ -287,31 +342,31 @@ export class DatabaseStorage implements IStorage {
     const [mediaFile] = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.id, mediaId));
+      .where(eq(mediaFiles.id, mediaId))
 
     if (!mediaFile) {
-      return false;
+      return false
     }
 
     try {
       // Delete from R2
-      await deleteFileFromR2(mediaFile.key);
+      await deleteFileFromR2(mediaFile.key)
 
       // Delete from database
-      await db.delete(mediaFiles).where(eq(mediaFiles.id, mediaId));
+      await db.delete(mediaFiles).where(eq(mediaFiles.id, mediaId))
 
       // If this media file is associated with a message, update the message
       if (mediaFile.messageId) {
         await db
           .update(messages)
           .set({ mediaUrl: null })
-          .where(eq(messages.id, mediaFile.messageId));
+          .where(eq(messages.id, mediaFile.messageId))
       }
 
-      return true;
+      return true
     } catch (error) {
-      console.error(`Error deleting media file ${mediaId}:`, error);
-      return false;
+      console.error(`Error deleting media file ${mediaId}:`, error)
+      return false
     }
   }
 
@@ -322,9 +377,23 @@ export class DatabaseStorage implements IStorage {
     const mediaFilesList = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.chatExportId, chatExportId));
+      .where(eq(mediaFiles.chatExportId, chatExportId))
 
-    return mediaFilesList;
+    return mediaFilesList.map((file) => ({
+      ...file,
+      chatExportId: file.chatExportId ?? undefined,
+      messageId: file.messageId ?? undefined,
+      originalName: file.originalName ?? undefined,
+      size: file.size ?? undefined,
+      url: file.url ?? undefined,
+      type: file.type as 'voice' | 'image' | 'attachment' | 'pdf' | undefined,
+      fileHash: file.fileHash ?? undefined,
+      uploadedAt: file.uploadedAt
+        ? file.uploadedAt instanceof Date
+          ? file.uploadedAt.toISOString()
+          : String(file.uploadedAt)
+        : undefined,
+    }))
   }
 
   /**
@@ -334,9 +403,30 @@ export class DatabaseStorage implements IStorage {
     const [mediaFile] = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.id, mediaId));
+      .where(eq(mediaFiles.id, mediaId))
 
-    return mediaFile;
+    return mediaFile
+      ? {
+          ...mediaFile,
+          chatExportId: mediaFile.chatExportId ?? undefined,
+          messageId: mediaFile.messageId ?? undefined,
+          originalName: mediaFile.originalName ?? undefined,
+          size: mediaFile.size ?? undefined,
+          url: mediaFile.url ?? undefined,
+          type: mediaFile.type as
+            | 'voice'
+            | 'image'
+            | 'attachment'
+            | 'pdf'
+            | undefined,
+          fileHash: mediaFile.fileHash ?? undefined,
+          uploadedAt: mediaFile.uploadedAt
+            ? mediaFile.uploadedAt instanceof Date
+              ? mediaFile.uploadedAt.toISOString()
+              : String(mediaFile.uploadedAt)
+            : undefined,
+        }
+      : undefined
   }
 
   /**
@@ -345,47 +435,45 @@ export class DatabaseStorage implements IStorage {
   async updateMessageMediaUrl(
     messageId: number,
     r2Key: string,
-    r2Url: string,
+    r2Url: string
   ): Promise<void> {
-    // Determine the base URL of our application for absolute URLs
-    const appBaseUrl = process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS}`
-      : "http://localhost:5000";
+    // Use appBaseUrl for absolute URLs
+    const appBaseUrl = getAppBaseUrl()
 
     // Find existing media for this message
     const [existingMedia] = await db
       .select()
       .from(mediaFiles)
-      .where(eq(mediaFiles.messageId, messageId));
+      .where(eq(mediaFiles.messageId, messageId))
 
-    let mediaId: string;
+    let mediaId: string
 
     if (!existingMedia) {
       // Get the message to determine the content type and media type
       const [message] = await db
         .select()
         .from(messages)
-        .where(eq(messages.id, messageId));
+        .where(eq(messages.id, messageId))
 
       if (!message) {
-        throw new Error(`Message with ID ${messageId} not found`);
+        throw new Error(`Message with ID ${messageId} not found`)
       }
 
-      let contentType = "application/octet-stream";
-      let type: "voice" | "image" | "attachment" | "pdf" = "attachment";
+      let contentType = 'application/octet-stream'
+      let type: 'voice' | 'image' | 'attachment' | 'pdf' = 'attachment'
 
       // Determine content type and type from message
-      if (message.type === "voice") {
-        contentType = "audio/ogg";
-        type = "voice";
-      } else if (message.type === "image") {
-        contentType = "image/jpeg";
-        type = "image";
+      if (message.type === 'voice') {
+        contentType = 'audio/ogg'
+        type = 'voice'
+      } else if (message.type === 'image') {
+        contentType = 'image/jpeg'
+        type = 'image'
       }
 
       // Generate a UUID for the media file ID
-      const mediaFileId = uuidv4();
-      
+      const mediaFileId = uuidv4()
+
       // Create a new media file record
       const [mediaFile] = await db
         .insert(mediaFiles)
@@ -399,12 +487,13 @@ export class DatabaseStorage implements IStorage {
           size: 0, // We don't know the size
           url: r2Url,
           type,
+          uploadedAt: new Date(),
         })
-        .returning();
+        .returning()
 
-      mediaId = mediaFile.id;
+      mediaId = mediaFile.id
     } else {
-      mediaId = existingMedia.id;
+      mediaId = existingMedia.id
 
       // Update the existing media file with the new URL
       await db
@@ -412,48 +501,26 @@ export class DatabaseStorage implements IStorage {
         .set({
           key: r2Key,
           url: r2Url,
+          uploadedAt: new Date(),
         })
-        .where(eq(mediaFiles.id, mediaId));
+        .where(eq(mediaFiles.id, mediaId))
     }
 
     // Create a proxy URL that points to our server
-    const proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`;
-    console.log(`Setting message ${messageId} media URL to proxy: ${proxyUrl}`);
+    const proxyUrl = `${appBaseUrl}/api/media/proxy/${mediaId}`
+    console.log(`Created proxy URL: ${proxyUrl}`)
+  }
 
-    // Update the message with the proxy URL
+  /**
+   * Update a message with R2 media URL
+   */
+  async updateMessageProxyUrl(
+    messageId: number,
+    proxyUrl: string
+  ): Promise<void> {
     await db
       .update(messages)
       .set({ mediaUrl: proxyUrl })
-      .where(eq(messages.id, messageId));
-  }
-
-  // In MemStorage or DatabaseStorage class:
-  async updateMessageProxyUrl(
-    messageId: number,
-    proxyUrl: string,
-  ): Promise<void> {
-    try {
-      const result = await db
-        .update(messages)
-        .set({ mediaUrl: proxyUrl })
-        .where(eq(messages.id, messageId))
-        .returning({ updatedId: messages.id }); // Optional: check if update happened
-
-      if (result.length > 0) {
-        console.log(
-          `[DBStorage] Updated message ${messageId} mediaUrl to ${proxyUrl}`,
-        );
-      } else {
-        console.warn(
-          `[DBStorage] Message ${messageId} not found or mediaUrl unchanged.`,
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[DBStorage] Error updating message ${messageId} proxy URL:`,
-        error,
-      );
-      throw error; // Re-throw the error to be handled upstream
-    }
+      .where(eq(messages.id, messageId))
   }
 }

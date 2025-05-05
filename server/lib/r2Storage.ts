@@ -1,60 +1,60 @@
-import { 
-  S3Client, 
+import {
+  S3Client,
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
-  ListObjectsCommand
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import fs from "fs";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
+  ListObjectsCommand,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import fs from 'fs'
+import path from 'path'
+import { v4 as uuidv4 } from 'uuid'
 
 // Initialize Cloudflare R2 client
 const s3Client = new S3Client({
-  region: "auto",
+  region: 'auto',
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   },
-});
+})
 
 // Bucket name
-const BUCKET_NAME = "whatspdf";
+const BUCKET_NAME = 'whatspdf'
 
 // File types we support
 const ALLOWED_MIME_TYPES: Record<string, string> = {
   // Audio files
-  "audio/ogg": ".ogg",
-  "audio/mpeg": ".mp3",
-  "audio/mp4": ".m4a",
-  "audio/wav": ".wav",
-  "audio/webm": ".webm",
+  'audio/ogg': '.ogg',
+  'audio/mpeg': '.mp3',
+  'audio/mp4': '.m4a',
+  'audio/wav': '.wav',
+  'audio/webm': '.webm',
   // Image files
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/gif": ".gif",
-  "image/webp": ".webp",
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
   // Documents
-  "application/pdf": ".pdf",
+  'application/pdf': '.pdf',
   // Archives
-  "application/zip": ".zip",
-  "application/x-zip-compressed": ".zip",
-};
+  'application/zip': '.zip',
+  'application/x-zip-compressed': '.zip',
+}
 
 // Default expiration time for signed URLs (7 days - AWS maximum)
-const DEFAULT_EXPIRATION = 60 * 60 * 24 * 7;
+const DEFAULT_EXPIRATION = 60 * 60 * 24 * 7
 
 // Maximum allowed expiration time by AWS S3 (7 days)
-const MAX_EXPIRATION = 60 * 60 * 24 * 7;
+const MAX_EXPIRATION = 60 * 60 * 24 * 7
 
 export interface R2StorageObjectMetadata {
-  key: string;
-  size: number;
-  lastModified: Date;
-  contentType: string;
-  url: string;
+  key: string
+  size: number
+  lastModified: Date
+  contentType: string
+  url: string
 }
 
 /**
@@ -67,28 +67,28 @@ export interface R2StorageObjectMetadata {
 export async function uploadFileToR2(
   filePath: string,
   contentType: string,
-  directory: string = "media"
+  directory: string = 'media'
 ): Promise<string> {
   try {
     // Validate file exists
     if (!fs.existsSync(filePath)) {
-      throw new Error(`File not found: ${filePath}`);
+      throw new Error(`File not found: ${filePath}`)
     }
 
     // Determine file extension
-    let fileExt = path.extname(filePath);
+    let fileExt = path.extname(filePath)
     if (!fileExt && ALLOWED_MIME_TYPES[contentType]) {
-      fileExt = ALLOWED_MIME_TYPES[contentType];
+      fileExt = ALLOWED_MIME_TYPES[contentType]
     }
 
     // Generate unique key
-    const uniqueId = uuidv4();
-    const fileName = path.basename(filePath, path.extname(filePath));
-    const sanitizedName = fileName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-    const key = `${directory}/${sanitizedName}_${uniqueId}${fileExt}`;
+    const uniqueId = uuidv4()
+    const fileName = path.basename(filePath, path.extname(filePath))
+    const sanitizedName = fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+    const key = `${directory}/${sanitizedName}_${uniqueId}${fileExt}`
 
     // Read file data
-    const fileContent = fs.readFileSync(filePath);
+    const fileContent = fs.readFileSync(filePath)
 
     // Upload to R2
     const command = new PutObjectCommand({
@@ -100,14 +100,16 @@ export async function uploadFileToR2(
         originalName: path.basename(filePath),
         uploadDate: new Date().toISOString(),
       },
-    });
+    })
 
-    await s3Client.send(command);
-    console.log(`Uploaded file to R2: ${key}`);
-    return key;
+    await s3Client.send(command)
+    console.log(
+      `[R2 UPLOAD] filePath=${filePath}, contentType=${contentType}, directory=${directory}, key=${key}`
+    )
+    return key
   } catch (error) {
-    console.error("Error uploading file to R2:", error);
-    throw error;
+    console.error('Error uploading file to R2:', error)
+    throw error
   }
 }
 
@@ -123,21 +125,24 @@ export async function getSignedR2Url(
 ): Promise<string> {
   try {
     // Ensure expiration doesn't exceed AWS maximum
-    const safeExpiration = Math.min(expiresIn, MAX_EXPIRATION);
-    
+    const safeExpiration = Math.min(expiresIn, MAX_EXPIRATION)
+
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
-    });
+    })
 
     const signedUrl = await getSignedUrl(s3Client, command, {
       expiresIn: safeExpiration,
-    });
+    })
 
-    return signedUrl;
+    console.log(
+      `[R2 SIGNED URL] key=${key}, expiresIn=${safeExpiration}s, url=${signedUrl}`
+    )
+    return signedUrl
   } catch (error) {
-    console.error("Error generating signed URL:", error);
-    throw error;
+    console.error('Error generating signed URL:', error)
+    throw error
   }
 }
 
@@ -151,14 +156,14 @@ export async function deleteFileFromR2(key: string): Promise<boolean> {
     const command = new DeleteObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
-    });
+    })
 
-    await s3Client.send(command);
-    console.log(`Deleted file from R2: ${key}`);
-    return true;
+    await s3Client.send(command)
+    console.log(`Deleted file from R2: ${key}`)
+    return true
   } catch (error) {
-    console.error("Error deleting file from R2:", error);
-    throw error;
+    console.error('Error deleting file from R2:', error)
+    throw error
   }
 }
 
@@ -168,35 +173,35 @@ export async function deleteFileFromR2(key: string): Promise<boolean> {
  * @returns Array of object metadata
  */
 export async function listFilesInR2(
-  directory: string = "media"
+  directory: string = 'media'
 ): Promise<R2StorageObjectMetadata[]> {
   try {
     const command = new ListObjectsCommand({
       Bucket: BUCKET_NAME,
       Prefix: directory,
-    });
+    })
 
-    const response = await s3Client.send(command);
-    const objects = response.Contents || [];
+    const response = await s3Client.send(command)
+    const objects = response.Contents || []
 
     // Generate signed URLs for each object
     const metadataPromises = objects.map(async (object) => {
-      const key = object.Key!;
-      const url = await getSignedR2Url(key);
-      
+      const key = object.Key!
+      const url = await getSignedR2Url(key)
+
       return {
         key,
         size: object.Size || 0,
         lastModified: object.LastModified || new Date(),
-        contentType: object.StorageClass || "unknown",
+        contentType: object.StorageClass || 'unknown',
         url,
-      };
-    });
+      }
+    })
 
-    return Promise.all(metadataPromises);
+    return Promise.all(metadataPromises)
   } catch (error) {
-    console.error("Error listing files in R2:", error);
-    throw error;
+    console.error('Error listing files in R2:', error)
+    throw error
   }
 }
 
@@ -209,13 +214,13 @@ export async function testR2Connection(): Promise<boolean> {
     const command = new ListObjectsCommand({
       Bucket: BUCKET_NAME,
       MaxKeys: 1,
-    });
+    })
 
-    await s3Client.send(command);
-    console.log("R2 connection successful");
-    return true;
+    await s3Client.send(command)
+    console.log('R2 connection successful')
+    return true
   } catch (error) {
-    console.error("R2 connection failed:", error);
-    return false;
+    console.error('R2 connection failed:', error)
+    return false
   }
 }
