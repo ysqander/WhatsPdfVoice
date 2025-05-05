@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -12,7 +13,7 @@ export const processingProgress = pgTable("processing_progress", {
 
 // Messages table
 export const messages = pgTable("messages", {
-  id: integer("id").primaryKey(),
+  id: integer("id").primaryKey().default(sql`nextval('messages_id_seq'::regclass)`),
   chatExportId: integer("chat_export_id").notNull(),
   timestamp: timestamp("timestamp").notNull(),
   sender: text("sender").notNull(),
@@ -40,7 +41,7 @@ export const mediaFiles = pgTable("media_files", {
 
 // Chat exports table
 export const chatExports = pgTable("chat_exports", {
-  id: integer("id").primaryKey(),
+  id: integer("id").primaryKey().default(sql`nextval('chat_exports_id_seq'::regclass)`),
   originalFilename: text("original_filename").notNull(),
   fileHash: text("file_hash").notNull(),
   participants: text("participants").array(),
