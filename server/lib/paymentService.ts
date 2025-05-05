@@ -1,13 +1,14 @@
 import Stripe from 'stripe';
 import { db } from '../db';
-import { paymentBundles, insertPaymentBundleSchema, PaymentBundle, Message } from '../../shared/schema';
+import { paymentBundles, insertPaymentBundleSchema, PaymentBundle, Message as SchemaMessage } from '../../shared/schema';
 import { eq, and, lt, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage';
 import { generatePdf } from './pdf';
 import fs from 'fs';
 import path from 'path';
-import { ChatExport, Message as TypeMessage } from '../../shared/types';
+import os from 'os';
+import { ChatExport, Message, ProcessingOptions } from '../../shared/types';
 
 // Ensure Stripe API key is available
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -279,7 +280,8 @@ export class PaymentService {
                 const recoveredMessages = backupData.messages;
                 
                 // Convert timestamps to ensure compatibility
-                const normalizedMessages = recoveredMessages.map(message => ({
+                // @ts-ignore - We know the shape of the message object from our backup
+                const normalizedMessages = recoveredMessages.map((message: any) => ({
                   ...message,
                   chatExportId,
                   timestamp: typeof message.timestamp === 'object' ? 

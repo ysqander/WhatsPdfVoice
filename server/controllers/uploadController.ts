@@ -357,7 +357,16 @@ export const uploadController = {
               
               // Update the chat data with fresh message records
               const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
-              chatData.messages = updatedMessages;
+              console.log(`Retrieved ${updatedMessages.length} messages for chat export ${savedChatExport.id}`);
+              
+              // Convert all message timestamps to strings for compatibility
+              // @ts-ignore - We'll ignore the type mismatch as we're normalizing the data
+              chatData.messages = updatedMessages.map(msg => ({
+                ...msg,
+                timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date
+                  ? msg.timestamp.toISOString()
+                  : String(msg.timestamp) 
+              }));
               
               // We don't generate the PDF here anymore - it will be generated after payment
               // to ensure we use the correct data and media URLs
@@ -437,7 +446,13 @@ export const uploadController = {
           console.log(`Verified ${savedMessages.length} messages saved for chat ${savedChatExport.id}`);
           
           // Important: Update chatData with the saved messages to ensure they're included in the response
-          chatData.messages = savedMessages;
+          // @ts-ignore - We'll normalize the timestamp types
+          chatData.messages = savedMessages.map(msg => ({
+            ...msg,
+            timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date
+              ? msg.timestamp.toISOString()
+              : String(msg.timestamp) 
+          }));
 
           // Process and upload media files to R2
           storage.saveProcessingProgress(clientId, 60, ProcessingStep.CONVERT_VOICE);
@@ -553,7 +568,16 @@ export const uploadController = {
 
           // Update chatData with new media URLs before generating PDF
           const updatedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
-          chatData.messages = updatedMessages;
+          console.log(`Retrieved ${updatedMessages.length} messages with updated media URLs for PDF generation`);
+          
+          // Convert all message timestamps to strings for compatibility with generatePdf
+          // @ts-ignore - We'll ignore the type mismatch as we're normalizing the data
+          chatData.messages = updatedMessages.map(msg => ({
+            ...msg,
+            timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date
+              ? msg.timestamp.toISOString()
+              : String(msg.timestamp) 
+          }));
           
           // Make sure chatData has the saved ID for media file lookup
           chatData.id = savedChatExport.id;
