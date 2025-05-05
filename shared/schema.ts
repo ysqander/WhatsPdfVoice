@@ -27,6 +27,7 @@ export const paymentBundles = pgTable("payment_bundles", {
   chatExportId: integer("chat_export_id"), // Associated chat export ID (if any)
   r2TempKey: text("r2_temp_key"), // Temporary R2 storage location
   r2FinalKey: text("r2_final_key"), // Final R2 storage location after payment
+  originalFileMediaId: text("original_file_media_id"), // ID of the uploaded original chat file in R2
   messageCount: integer("message_count"), // Number of messages in the chat
   mediaSizeBytes: integer("media_size_bytes"), // Total size of media files in bytes
   isPaid: boolean("is_paid").default(false), // Whether this bundle has been paid for
