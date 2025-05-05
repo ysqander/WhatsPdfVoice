@@ -791,7 +791,19 @@ export const uploadController = {
                                 "Uploaded main PDF file with special metadata markers:",
                                 pdfMediaFile.id,
                             );
-                            finalPdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`; // Use proxy URL
+                            // Create a media proxy record to ensure the proxy endpoint works
+                            const mediaProxy = await mediaProxyStorage.createMediaProxy(
+                                pdfMediaFile.key,
+                                pdfMediaFile.url || '',
+                                "application/pdf"
+                            );
+                            console.log(
+                                "Created media proxy record for PDF:",
+                                mediaProxy.id
+                            );
+                            
+                            // Use the proxy URL with the proxy ID, not the media file ID
+                            finalPdfUrl = `${appBaseUrl}/api/media/proxy/${mediaProxy.id}`;
                             console.log(
                                 "Generated proxy URL for final PDF:",
                                 finalPdfUrl,

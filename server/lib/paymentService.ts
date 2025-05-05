@@ -4,6 +4,7 @@ import { paymentBundles, PaymentBundle } from "../../shared/schema"; // Removed 
 import { eq, and, lt, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { storage } from "../storage"; // Assuming storage implements IStorage
+import { mediaProxyStorage } from "../mediaProxyStorage";
 import { generatePdf } from "./pdf";
 import fs from "fs";
 import path from "path";
@@ -377,8 +378,19 @@ export class PaymentService {
         `[PaymentService] Final PDF uploaded to R2: key=${pdfMediaFile.key}, id=${pdfMediaFile.id}`,
       );
 
-      // 7. Generate Proxy URL and Save to ChatExport
-      const finalPdfUrl = `${appBaseUrl}/api/media/proxy/${pdfMediaFile.id}`;
+      // 7. Create a Media Proxy Record and Generate Proxy URL
+      // This is crucial for the /api/media/proxy endpoint to work
+      const mediaProxy = await mediaProxyStorage.createMediaProxy(
+        pdfMediaFile.key,
+        pdfMediaFile.url || '',
+        "application/pdf"
+      );
+      console.log(
+        `[PaymentService] Created media proxy record for PDF: ${mediaProxy.id}`
+      );
+
+      // Now generate the proxy URL with the proxy ID (not the media file ID)
+      const finalPdfUrl = `${appBaseUrl}/api/media/proxy/${mediaProxy.id}`;
       console.log(
         `[PaymentService] Generated final PDF proxy URL: ${finalPdfUrl}`,
       );
