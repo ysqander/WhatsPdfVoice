@@ -1,12 +1,13 @@
 import Stripe from 'stripe';
 import { db } from '../db';
-import { paymentBundles, insertPaymentBundleSchema, PaymentBundle } from '../../shared/schema';
+import { paymentBundles, insertPaymentBundleSchema, PaymentBundle, Message } from '../../shared/schema';
 import { eq, and, lt, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage';
 import { generatePdf } from './pdf';
 import fs from 'fs';
 import path from 'path';
+import { ChatExport, Message as TypeMessage } from '../../shared/types';
 
 // Ensure Stripe API key is available
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -108,7 +109,7 @@ export class PaymentService {
             currency: 'usd',
             product_data: {
               name: 'WhatsApp Chat Export',
-              description: `${bundle.messageCount} messages and ${(bundle.mediaSizeBytes / (1024 * 1024)).toFixed(1)} MB of media`,
+              description: `${bundle.messageCount || 0} messages and ${((bundle.mediaSizeBytes || 0) / (1024 * 1024)).toFixed(1)} MB of media`,
             },
             unit_amount: 900, // $9.00 in cents
           },
@@ -205,8 +206,9 @@ export class PaymentService {
    * Ensures the final PDF for a paid bundle is generated, uploaded, and linked.
    * This is idempotent - safe to call even if already done.
    * @param bundle The payment bundle (must be marked as paid)
+   * @returns ChatExport data with messages when recovery is successful, void otherwise
    */
-  private async ensurePdfGeneratedAndLinked(bundle: PaymentBundle): Promise<void> {
+  private async ensurePdfGeneratedAndLinked(bundle: PaymentBundle): Promise<ChatExport | void> {
     if (!bundle.paidAt) {
       console.warn(`ensurePdfGeneratedAndLinked called for unpaid bundle ${bundle.bundleId}. Skipping.`);
       return;
@@ -302,12 +304,21 @@ export class PaymentService {
             
             if (updatedMessages.length > 0) {
               console.log(`Using recovered messages for PDF generation`);
+              // Convert all message timestamps to strings for compatibility
+              const normalizedMessages = updatedMessages.map(message => ({
+                ...message,
+                timestamp: typeof message.timestamp === 'object' && message.timestamp instanceof Date 
+                  ? message.timestamp.toISOString() 
+                  : String(message.timestamp)
+              }));
+              
+              // Update our reference to use normalized messages
               const fullChatData = { 
                 ...chatExport, 
-                messages: updatedMessages,
+                messages: normalizedMessages,
                 id: chatExportId  // Ensure ID is explicitly set for lookup during PDF generation
               };
-              return fullChatData;
+              return fullChatData as ChatExport;
             }
           }
         } catch (err) {
@@ -322,11 +333,19 @@ export class PaymentService {
         console.error(`Failed to recover messages. The PDF will be generated without message content.`);
       }
       
+      // Convert all message timestamps to strings for compatibility
+      const normalizedMessages = messages.map(message => ({
+        ...message,
+        timestamp: typeof message.timestamp === 'object' && message.timestamp instanceof Date 
+          ? message.timestamp.toISOString() 
+          : String(message.timestamp)
+      }));
+      
       const fullChatData = { 
         ...chatExport, 
-        messages,
+        messages: normalizedMessages,
         id: chatExportId  // Ensure ID is explicitly set for lookup during PDF generation
-      }; // Construct the full object needed by generatePdf
+      } as ChatExport; // Construct the full object needed by generatePdf
 
       // Generate the final PDF
       console.log(`Generating final PDF for chat ${chatExportId}...`);
