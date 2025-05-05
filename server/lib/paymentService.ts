@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { storage } from "../storage"; // Assuming storage implements IStorage
 import { mediaProxyStorage } from "../mediaProxyStorage";
 import { generatePdf } from "./pdf";
+import { getSignedR2Url } from "./r2Storage";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -394,6 +395,14 @@ export class PaymentService {
       console.log(
         `[PaymentService] Generated final PDF proxy URL: ${finalPdfUrl}`,
       );
+      
+      // Check if the R2 file exists - this will help debug NoSuchKey errors
+      try {
+        const testUrl = await getSignedR2Url(pdfMediaFile.key);
+        console.log(`[PaymentService] Verified the PDF file exists at key ${pdfMediaFile.key}`);
+      } catch (error) {
+        console.error(`[PaymentService] *** WARNING: Could not verify PDF existence in R2 at key ${pdfMediaFile.key}:`, error);
+      }
 
       await storage.savePdfUrl(chatExportId, finalPdfUrl);
       console.log(
