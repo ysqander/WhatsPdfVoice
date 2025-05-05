@@ -249,9 +249,84 @@ export class PaymentService {
         console.log(`No valid PDF URL found for chat ${chatExportId}. Generating PDF.`);
       }
 
-      // Fetch full chat data including messages with updated media URLs
+      // Fetch messages for this chat
       const messages = await storage.getMessagesByChatExportId(chatExportId);
-      const fullChatData = { ...chatExport, messages }; // Construct the full object needed by generatePdf
+      console.log(`Retrieved ${messages.length} messages for chat ${chatExportId} to include in PDF generation`);
+      
+      // Check if we have messages
+      if (messages.length === 0) {
+        console.error(`No messages found in memory storage for chat ${chatExportId}! This will result in an empty PDF.`);
+        console.log(`Attempting to recover messages from the original chat processing...`);
+        
+        try {
+          // We need to look at the original chatData that was processed during upload
+          // This is a workaround for the in-memory storage that might lose messages between restarts
+          const originalChatExport = chatExport;
+          
+          // If we managed to recover messages, use them
+          if (originalChatExport.messages && originalChatExport.messages.length > 0) {
+            console.log(`Recovered ${originalChatExport.messages.length} messages from the original chat data`);
+            
+            // Make sure each recovered message has the correct chatExportId
+            const recoveredMessages = originalChatExport.messages.map(msg => ({
+              ...msg,
+              chatExportId
+            }));
+            
+            // Save these messages to storage for future use
+            for (const message of recoveredMessages) {
+              try {
+                // Make sure timestamp is a string for compatibility with types.ts
+                const timestamp = typeof message.timestamp === 'object' && message.timestamp instanceof Date
+                  ? message.timestamp.toISOString()
+                  : message.timestamp;
+                
+                await storage.saveMessage({
+                  chatExportId,
+                  timestamp,
+                  sender: message.sender,
+                  content: message.content,
+                  type: message.type,
+                  mediaUrl: message.mediaUrl,
+                  duration: message.duration,
+                  isDeleted: message.isDeleted
+                });
+              } catch (err) {
+                console.error(`Error saving recovered message: ${err}`);
+              }
+            }
+            
+            // Update our messages reference for PDF generation
+            const updatedMessages = await storage.getMessagesByChatExportId(chatExportId);
+            console.log(`After recovery: ${updatedMessages.length} messages available`);
+            
+            if (updatedMessages.length > 0) {
+              console.log(`Using recovered messages for PDF generation`);
+              const fullChatData = { 
+                ...chatExport, 
+                messages: updatedMessages,
+                id: chatExportId  // Ensure ID is explicitly set for lookup during PDF generation
+              };
+              return fullChatData;
+            }
+          }
+        } catch (err) {
+          console.error(`Error attempting to recover messages: ${err}`);
+        }
+      }
+      
+      // Log sample of first few messages to verify content
+      if (messages.length > 0) {
+        console.log(`First message sample: ${JSON.stringify(messages[0]).substring(0, 200)}...`);
+      } else {
+        console.error(`Failed to recover messages. The PDF will be generated without message content.`);
+      }
+      
+      const fullChatData = { 
+        ...chatExport, 
+        messages,
+        id: chatExportId  // Ensure ID is explicitly set for lookup during PDF generation
+      }; // Construct the full object needed by generatePdf
 
       // Generate the final PDF
       console.log(`Generating final PDF for chat ${chatExportId}...`);

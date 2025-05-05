@@ -1,0 +1,245 @@
+Upload request received: {
+  headers: {
+    host: 'eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'content-length': '438412',
+    accept: '*/*',
+    'accept-encoding': 'gzip, deflate, br, zstd',
+    'accept-language': 'en-GB,en;q=0.8',
+    'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryjczlNbBCU4kEuUwx',
+    cookie: '__stripe_mid=e9a76655-bc8c-4716-9b97-1ae2ea13c1efee7b8c; __stripe_sid=fa5770cf-2697-47db-b619-7fc439b00393ef55cd',
+    origin: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    referer: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/',
+    'sec-ch-ua': '"Brave";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'x-forwarded-for': '45.155.143.100, 10.83.3.123',
+    'x-forwarded-proto': 'https',
+    'x-replit-user-bio': '',
+    'x-replit-user-id': '',
+    'x-replit-user-name': '',
+    'x-replit-user-profile-image': '',
+    'x-replit-user-roles': '',
+    'x-replit-user-teams': '',
+    'x-replit-user-url': ''
+  },
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundaryjczlNbBCU4kEuUwx',
+  files: undefined,
+  file: {
+    fieldname: 'file',
+    originalname: 'WhatsApp Chat - more than 50 messages.zip',
+    encoding: '7bit',
+    mimetype: 'application/zip',
+    destination: '/tmp/whatspdf-uploads',
+    filename: 'file-1746424898381-6c7b501e-a1c1-469d-9d7e-800020e8565d.zip',
+    path: '/tmp/whatspdf-uploads/file-1746424898381-6c7b501e-a1c1-469d-9d7e-800020e8565d.zip',
+    size: 437973
+  },
+  body: [Object: null prototype] {
+    options: '{"includeVoiceMessages":true,"includeTimestamps":true,"highlightSenders":true,"includeImages":true,"includeAttachments":true}'
+  }
+}
+File details: {
+  originalname: 'WhatsApp Chat - more than 50 messages.zip',
+  mimetype: 'application/zip',
+  size: 437973,
+  path: '/tmp/whatspdf-uploads/file-1746424898381-6c7b501e-a1c1-469d-9d7e-800020e8565d.zip'
+}
+Waiting for SSE connection for clientId: cde58dee-a84a-49ad-bdf1-8a0355b45b4e
+6:01:38 AM [express] POST /api/whatsapp/process 200 in 547ms :: {"clientId":"cde58dee-a84a-49ad-bdf1…
+Starting background processing for clientId: cde58dee-a84a-49ad-bdf1-8a0355b45b4e
+Starting parse for file: /tmp/whatspdf-uploads/file-1746424898381-6c7b501e-a1c1-469d-9d7e-800020e8565d.zip
+Looking for attachment: -0000007-AUDIO-2025-05-01-18-28-48.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Looking for attachment: -0000003-AUDIO-2025-05-01-18-31-00.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Looking for attachment: -0000001-AUDIO-2025-05-01-18-32-10.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Looking for attachment: 00000002-AUDIO-2025-05-04-10-29-03.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000002-AUDIO-2025-05-04-10-29-03.opus
+Looking for attachment: 00000004-AUDIO-2025-05-04-10-29-35.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000004-AUDIO-2025-05-04-10-29-35.opus
+Looking for attachment: 00000005-AUDIO-2025-05-04-10-29-50.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000005-AUDIO-2025-05-04-10-29-50.opus
+Looking for attachment: 00000006-AUDIO-2025-05-04-10-30-08.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000006-AUDIO-2025-05-04-10-30-08.opus
+Looking for attachment: 00000008-AUDIO-2025-05-04-10-28-20.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000008-AUDIO-2025-05-04-10-28-20.opus
+Looking for attachment: 00000010-PHOTO-2025-05-04-10-53-14.jpg in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Looking for attachment: 00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Found attachment: /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5/WhatsApp Chat - more than 50 messages/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Looking for attachment: 00000014-AUDIO-2025-05-04-11-16-48.opus in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Attachment not found: 00000014-AUDIO-2025-05-04-11-16-48.opus
+Looking for attachment: 00000015-PHOTO-2025-05-06-10-20-35.jpg in /tmp/whatspdf-temp/623aa0f9-c705-4913-8796-0d4e6f6ff1c5
+Attachment not found: 00000015-PHOTO-2025-05-06-10-20-35.jpg
+Parsed chat export: {
+  messageCount: 85,
+  participantCount: 2,
+  firstMessageSample: {
+    timestamp: '2025-05-01T18:27:34',
+    sender: 'Iris Adamov',
+    content: 'Hi Alex, there’s mold coming back in the corner of the bedroom again. Can you please arrange for someone to look at it?',
+    type: 'text',
+    mediaUrl: undefined,
+    duration: undefined
+  },
+  options: {
+    includeVoiceMessages: true,
+    includeTimestamps: true,
+    highlightSenders: true,
+    includeImages: true,
+    includeAttachments: true
+  }
+}
+Parse completed successfully
+Analyzing chat size. Messages: 85
+Total media size: 428236 bytes (0.41MB)
+Chat exceeds free tier limits. Payment required.
+Created payment bundle: { bundleId: '326896a1-003a-40de-b48d-fe0dc542cf8d' }
+R2 connection successful
+R2 connection successful, proceeding with media uploads
+Found 10 media messages to upload to R2
+Processing 8 voice messages
+Uploading voice message to R2: /tmp/whatspdf/media/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Uploaded file to R2: chats/1/voice/_0000007_audio_2025_05_01_18_28_48_b010b259-3db6-4218-9ed0-e6733f08e597.opus
+Uploaded media file to R2: chats/1/voice/_0000007_audio_2025_05_01_18_28_48_b010b259-3db6-4218-9ed0-e6733f08e597.opus
+Uploading voice message to R2: /tmp/whatspdf/media/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Uploaded file to R2: chats/1/voice/_0000003_audio_2025_05_01_18_31_00_e7ec38c7-2967-4515-891f-e8740901999f.opus
+Uploaded media file to R2: chats/1/voice/_0000003_audio_2025_05_01_18_31_00_e7ec38c7-2967-4515-891f-e8740901999f.opus
+Uploading voice message to R2: /tmp/whatspdf/media/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Uploaded file to R2: chats/1/voice/_0000001_audio_2025_05_01_18_32_10_fbb8ab5e-6608-4cbd-84c9-4b9d4e636669.opus
+Uploaded media file to R2: chats/1/voice/_0000001_audio_2025_05_01_18_32_10_fbb8ab5e-6608-4cbd-84c9-4b9d4e636669.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000002-AUDIO-2025-05-04-10-29-03.opus
+Uploaded file to R2: chats/1/voice/00000002_audio_2025_05_04_10_29_03_c1ed8989-2459-4c8d-8197-f86898b06412.opus
+Uploaded media file to R2: chats/1/voice/00000002_audio_2025_05_04_10_29_03_c1ed8989-2459-4c8d-8197-f86898b06412.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000004-AUDIO-2025-05-04-10-29-35.opus
+Uploaded file to R2: chats/1/voice/00000004_audio_2025_05_04_10_29_35_0f0eaa18-2561-4ba8-9a02-065e88fec4dd.opus
+Uploaded media file to R2: chats/1/voice/00000004_audio_2025_05_04_10_29_35_0f0eaa18-2561-4ba8-9a02-065e88fec4dd.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000005-AUDIO-2025-05-04-10-29-50.opus
+Uploaded file to R2: chats/1/voice/00000005_audio_2025_05_04_10_29_50_02b76135-1fd6-4246-9826-4aab2680d05a.opus
+Uploaded media file to R2: chats/1/voice/00000005_audio_2025_05_04_10_29_50_02b76135-1fd6-4246-9826-4aab2680d05a.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000006-AUDIO-2025-05-04-10-30-08.opus
+Uploaded file to R2: chats/1/voice/00000006_audio_2025_05_04_10_30_08_eabc5e1d-3de4-4611-be71-c523b2e30809.opus
+Uploaded media file to R2: chats/1/voice/00000006_audio_2025_05_04_10_30_08_eabc5e1d-3de4-4611-be71-c523b2e30809.opus
+Uploading voice message to R2: /tmp/whatspdf/media/00000008-AUDIO-2025-05-04-10-28-20.opus
+Uploaded file to R2: chats/1/voice/00000008_audio_2025_05_04_10_28_20_37d01ece-41e8-47c2-b280-91b699b8f109.opus
+Uploaded media file to R2: chats/1/voice/00000008_audio_2025_05_04_10_28_20_37d01ece-41e8-47c2-b280-91b699b8f109.opus
+Processing 1 image messages
+Uploading image to R2: /tmp/whatspdf/media/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Uploaded file to R2: chats/1/image/00000010_photo_2025_05_04_10_53_14_f1210066-c5b9-4b85-abd5-ca1254cf3345.jpg
+Uploaded media file to R2: chats/1/image/00000010_photo_2025_05_04_10_53_14_f1210066-c5b9-4b85-abd5-ca1254cf3345.jpg
+Processing 1 attachment messages
+Uploading attachment to R2: /tmp/whatspdf/media/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Uploaded file to R2: chats/1/attachment/00000013_a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127_f564_48fd_8187_6cb13bdb0c4c_aaa29f9d-6331-44ad-86e9-f93d879950b8.pdf
+Uploaded media file to R2: chats/1/attachment/00000013_a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127_f564_48fd_8187_6cb13bdb0c4c_aaa29f9d-6331-44ad-86e9-f93d879950b8.pdf
+Skipping PDF generation until after payment is completed
+6:01:41 AM [express] GET /api/whatsapp/process-status 200 in 2739ms
+6:01:45 AM [express] POST /api/create-payment-intent 200 in 520ms :: {"success":true,"clientSecret":…
+Webhook received. Headers: {
+  'content-type': 'application/json; charset=utf-8',
+  'stripe-signature': 'Present'
+}
+Webhook raw body received: true object
+Event construction successful: checkout.session.completed
+Webhook verified successfully: checkout.session.completed
+Processing checkout session: {
+  sessionId: 'cs_test_a1mJ5yR3SuJlnFZZrAE8YK0q8DjBpyKFu2LI6ak85IxCqb1ojJtN52MHEX',
+  bundleId: '326896a1-003a-40de-b48d-fe0dc542cf8d',
+  customerId: null,
+  paymentStatus: 'paid'
+}
+Retrieving Stripe session cs_test_a1mJ5yR3SuJlnFZZrAE8YK0q8DjBpyKFu2LI6ak85IxCqb1ojJtN52MHEX
+Session retrieved, payment_status=paid, customer=null
+Processing payment for bundle 326896a1-003a-40de-b48d-fe0dc542cf8d
+Existing bundle found: chatExportId=1, paidAt=null
+Bundle 326896a1-003a-40de-b48d-fe0dc542cf8d marked as paid successfully.
+Ensuring PDF exists and is linked for paid chat export 1
+No valid PDF URL found for chat 1. Generating PDF.
+Generating final PDF for chat 1...
+Starting PDF generation with pdf-lib...
+[PDF DEBUG] generatePdfWithPdfLib called for chatData.id: 1
+[PDF DEBUG] Attempting storage.getMediaFilesByChat with ID: 1
+[PDF DEBUG] storage.getMediaFilesByChat returned 10 files.
+[PDF DEBUG] First media file sample: ID=228dd3d4-b633-4326-b765-54ec47ca66bf, type=voice, messageId=undefined, chatExportId=1
+PDF: Media file 1/10: ID=228dd3d4-b633-4326-b765-54ec47ca66bf, type=voice, messageId=undefined
+PDF: Media file 2/10: ID=3a067826-e078-4524-b45f-377aefd7a407, type=voice, messageId=undefined
+PDF: Media file 3/10: ID=6a06ca10-8323-402f-959a-2ffc6d5f7272, type=voice, messageId=undefined
+PDF: Media file 4/10: ID=e5b578b6-6952-4a52-9447-996f41f64899, type=voice, messageId=undefined
+PDF: Media file 5/10: ID=8ccd7afc-b65d-40d0-90d6-f6ff42dab10a, type=voice, messageId=undefined
+PDF: Media file 6/10: ID=badcc476-559b-4f00-817d-96e50dd2b477, type=voice, messageId=undefined
+PDF: Media file 7/10: ID=0b915bd1-2ea9-4e1e-8fbe-1a9a4f065281, type=voice, messageId=undefined
+PDF: Media file 8/10: ID=60e2fe2d-e548-4626-98a5-01e6e685ea96, type=voice, messageId=undefined
+PDF: Media file 9/10: ID=ab772228-d755-4b20-a639-0e1f06d5c221, type=image, messageId=undefined
+PDF: Media file 10/10: ID=4a5b06dc-ad6e-4cec-ae73-5217ae55624e, type=attachment, messageId=undefined
+PDF: Mapped 10 media file records (0 by message ID) for chat 1
+PDF: Media files map size: 10
+PDF: Media files array length: 10
+PDF: Unique media files count: 10
+[PDF DEBUG] Summary Page: displayMediaFiles count: 10
+[PDF DEBUG] Summary Page: First display file sample: ID=228dd3d4-b633-4326-b765-54ec47ca66bf, Name=-0000007-AUDIO-2025-05-01-18-28-48.opus, Type=voice
+PDF: Displaying 10 media files in summary table
+PDF: Using calculated SHA-256 hash for 228dd3d4-b633-4326-b765-54ec47ca66bf: 5d4f3c9f...
+PDF: Using calculated SHA-256 hash for 3a067826-e078-4524-b45f-377aefd7a407: 16257612...
+PDF: Using calculated SHA-256 hash for 6a06ca10-8323-402f-959a-2ffc6d5f7272: 1adddc64...
+PDF: Using calculated SHA-256 hash for e5b578b6-6952-4a52-9447-996f41f64899: c5b41078...
+PDF: Using calculated SHA-256 hash for 8ccd7afc-b65d-40d0-90d6-f6ff42dab10a: ac73832d...
+PDF: Using calculated SHA-256 hash for badcc476-559b-4f00-817d-96e50dd2b477: 88823369...
+PDF: Using calculated SHA-256 hash for 0b915bd1-2ea9-4e1e-8fbe-1a9a4f065281: acf4d0d9...
+PDF: Using calculated SHA-256 hash for 60e2fe2d-e548-4626-98a5-01e6e685ea96: 0a9b16ab...
+PDF: Using calculated SHA-256 hash for ab772228-d755-4b20-a639-0e1f06d5c221: 9125427f...
+PDF: Using calculated SHA-256 hash for 4a5b06dc-ad6e-4cec-ae73-5217ae55624e: 84b8d5b2...
+Saving PDF document...
+PDF file written successfully to: /tmp/whatspdf/pdfs/663f06c0-4526-4a35-ba49-7c77c1f136ff.pdf
+PDF details: { pdfId: '663f06c0-4526-4a35-ba49-7c77c1f136ff', size: 4970 }
+Final PDF generated locally at: /tmp/whatspdf/pdfs/663f06c0-4526-4a35-ba49-7c77c1f136ff.pdf
+Uploading final PDF to R2 for chat 1...
+Uploaded file to R2: chats/1/pdf/663f06c0_4526_4a35_ba49_7c77c1f136ff_292c6753-c44b-43dd-9a35-3ebd0fb24d6d.pdf
+Uploaded media file to R2: chats/1/pdf/663f06c0_4526_4a35_ba49_7c77c1f136ff_292c6753-c44b-43dd-9a35-3ebd0fb24d6d.pdf
+Final PDF uploaded to R2: key=chats/1/pdf/663f06c0_4526_4a35_ba49_7c77c1f136ff_292c6753-c44b-43dd-9a35-3ebd0fb24d6d.pdf, id=21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+Generated final PDF proxy URL: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+Successfully saved final PDF URL for chat export 1
+Cleaned up local PDF: /tmp/whatspdf/pdfs/663f06c0-4526-4a35-ba49-7c77c1f136ff.pdf
+Payment succeeded for bundle 326896a1-003a-40de-b48d-fe0dc542cf8d
+Retrieved PDF URL for paid bundle: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+Bundle marked as paid, valid for 30 days
+Processing success redirect for session: cs_test_a1mJ5yR3SuJlnFZZrAE8YK0q8DjBpyKFu2LI6ak85IxCqb1ojJtN52MHEX
+Retrieving Stripe session cs_test_a1mJ5yR3SuJlnFZZrAE8YK0q8DjBpyKFu2LI6ak85IxCqb1ojJtN52MHEX
+Session retrieved, payment_status=paid, customer=null
+Processing payment for bundle 326896a1-003a-40de-b48d-fe0dc542cf8d
+Existing bundle found: chatExportId=1, paidAt=Mon May 05 2025 06:02:06 GMT+0000 (Coordinated Universal Time)
+Bundle 326896a1-003a-40de-b48d-fe0dc542cf8d already marked as paid at Mon May 05 2025 06:02:06 GMT+0000 (Coordinated Universal Time)
+Ensuring PDF exists and is linked for paid chat export 1
+PDF URL https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd already exists and seems valid for chat 1. Skipping regeneration.
+Success redirect for bundle: 326896a1-003a-40de-b48d-fe0dc542cf8d, chatExportId: 1
+PDF URL for paid bundle 326896a1-003a-40de-b48d-fe0dc542cf8d: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+Fetching payment bundle status for 326896a1-003a-40de-b48d-fe0dc542cf8d
+Bundle 326896a1-003a-40de-b48d-fe0dc542cf8d: chatExportId=1, isPaid=true
+Found chat export 1 for bundle 326896a1-003a-40de-b48d-fe0dc542cf8d
+PDF URL found for bundle 326896a1-003a-40de-b48d-fe0dc542cf8d: https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+6:02:10 AM [express] GET /api/payment/326896a1-003a-40de-b48d-fe0dc542cf8d 200 in 40ms :: {"bundleId…
+Fetching chat export 1
+Returning chat export 1 with 0 messages
+6:02:11 AM [express] GET /api/whatsapp/chat/1 200 in 1ms :: {"originalFilename":"WhatsApp Chat - mor…
+Media proxy request received for ID: 21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd
+Found media proxy record, R2 key: chats/1/pdf/663f06c0_4526_4a35_ba49_7c77c1f136ff_292c6753-c44b-43dd-9a35-3ebd0fb24d6d.pdf
+Redirecting to R2 URL
+6:02:11 AM [express] GET /api/media/proxy/21ef3bfd-9cf1-44de-a36c-56c31a7f5fbd 302 in 59ms
+Downloaded PDF from R2 for evidence zip
+Downloaded media file: 60e2fe2d-e548-4626-98a5-01e6e685ea96.opus, hash: 0a9b16ab...
+Downloaded media file: 228dd3d4-b633-4326-b765-54ec47ca66bf.opus, hash: 5d4f3c9f...
+Downloaded media file: 8ccd7afc-b65d-40d0-90d6-f6ff42dab10a.opus, hash: ac73832d...
+Downloaded media file: e5b578b6-6952-4a52-9447-996f41f64899.opus, hash: c5b41078...
+Downloaded media file: 6a06ca10-8323-402f-959a-2ffc6d5f7272.opus, hash: 1adddc64...
+Downloaded media file: 4a5b06dc-ad6e-4cec-ae73-5217ae55624e.pdf, hash: 84b8d5b2...
+Downloaded media file: badcc476-559b-4f00-817d-96e50dd2b477.opus, hash: 88823369...
+Downloaded media file: 0b915bd1-2ea9-4e1e-8fbe-1a9a4f065281.opus, hash: acf4d0d9...
+Downloaded media file: 3a067826-e078-4524-b45f-377aefd7a407.opus, hash: 16257612...
+Downloaded media file: ab772228-d755-4b20-a639-0e1f06d5c221.jpg, hash: 9125427f...
+Downloaded 10 of 10 media files for evidence zip
+6:02:33 AM [express] GET /api/whatsapp/evidence-zip/1 200 in 1000ms
+Offline-compatible evidence ZIP created for chat ID 1
