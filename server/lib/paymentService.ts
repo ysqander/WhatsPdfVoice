@@ -102,7 +102,7 @@ export class PaymentService {
     
     // Create a Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card'] as any, // Typecasting to avoid TypeScript error
       line_items: [
         {
           price_data: {
@@ -122,7 +122,7 @@ export class PaymentService {
       client_reference_id: bundleId,
       metadata: {
         bundleId,
-        chatExportId: bundle.chatExportId?.toString(),
+        chatExportId: bundle.chatExportId?.toString() || '',
       },
     });
     
@@ -261,9 +261,85 @@ export class PaymentService {
         console.log(`Attempting to recover messages from the original chat processing...`);
         
         try {
-          // We need to look at the original chatData that was processed during upload
-          // This is a workaround for the in-memory storage that might lose messages between restarts
+          // First try to recover from bundle backup file
+          const bundleId = bundle.bundleId;
+          const chatDataBackupPath = path.join(os.tmpdir(), 'whatspdf', 'bundles', `bundle_${bundleId}.json`);
+          
+          console.log(`Attempting to recover messages from backup file: ${chatDataBackupPath}`);
+          
+          if (fs.existsSync(chatDataBackupPath)) {
+            try {
+              // Read backup file
+              const backupData = JSON.parse(fs.readFileSync(chatDataBackupPath, 'utf8'));
+              
+              if (backupData.messages && backupData.messages.length > 0) {
+                console.log(`Recovered ${backupData.messages.length} messages from bundle backup file`);
+                
+                // Use these messages as our source of truth
+                const recoveredMessages = backupData.messages;
+                
+                // Convert timestamps to ensure compatibility
+                const normalizedMessages = recoveredMessages.map(message => ({
+                  ...message,
+                  chatExportId,
+                  timestamp: typeof message.timestamp === 'object' ? 
+                    (message.timestamp instanceof Date ? message.timestamp.toISOString() : message.timestamp) : 
+                    message.timestamp
+                }));
+                
+                console.log(`Recovery found ${normalizedMessages.length} messages for chat ${chatExportId}`);
+                
+                // Save these for future use
+                for (const message of normalizedMessages) {
+                  try {
+                    await storage.saveMessage({
+                      chatExportId,
+                      timestamp: message.timestamp,
+                      sender: message.sender,
+                      content: message.content,
+                      type: message.type,
+                      mediaUrl: message.mediaUrl,
+                      duration: message.duration,
+                      isDeleted: message.isDeleted
+                    });
+                  } catch (err) {
+                    console.error(`Error saving recovered message from backup: ${err}`);
+                  }
+                }
+                
+                // Update our messages reference and return full chat data
+                const updatedMessages = await storage.getMessagesByChatExportId(chatExportId);
+                console.log(`After recovery from backup: ${updatedMessages.length} messages available`);
+                
+                if (updatedMessages.length > 0) {
+                  const fullChatData = { 
+                    ...chatExport, 
+                    messages: updatedMessages.map(msg => ({
+                      ...msg,
+                      timestamp: typeof msg.timestamp === 'object' && msg.timestamp instanceof Date 
+                        ? msg.timestamp.toISOString() 
+                        : String(msg.timestamp)
+                    })),
+                    id: chatExportId
+                  };
+                  return fullChatData as ChatExport;
+                }
+              }
+            } catch (err) {
+              console.error(`Error reading backup file: ${err}`);
+            }
+          } else {
+            console.log(`No backup file found at ${chatDataBackupPath}, trying alternative recovery`);
+          }
+          
+          // If backup file recovery failed, try from chatExport
           const originalChatExport = chatExport;
+          
+          // Verify if the chatExport actually has messages
+          console.log(`Inspecting chatExport for recovery, has messages: ${Boolean(originalChatExport.messages)}`);
+          if (originalChatExport.messages) {
+            console.log(`Found ${originalChatExport.messages.length} messages in the originalChatExport`);
+          }
           
           // If we managed to recover messages, use them
           if (originalChatExport.messages && originalChatExport.messages.length > 0) {

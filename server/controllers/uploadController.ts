@@ -267,6 +267,28 @@ export const uploadController = {
                 bundleId: bundle.bundleId
               });
               
+              // Save full chat data to a temporary file for recovery during payment
+              try {
+                const chatDataBackupDir = path.join(os.tmpdir(), 'whatspdf', 'bundles');
+                fs.mkdirSync(chatDataBackupDir, { recursive: true });
+                
+                const chatDataBackupPath = path.join(chatDataBackupDir, `bundle_${bundle.bundleId}.json`);
+                fs.writeFileSync(
+                  chatDataBackupPath, 
+                  JSON.stringify({
+                    chatData,
+                    messages: chatData.messages.map(msg => ({
+                      ...msg,
+                      chatExportId: savedChatExport.id
+                    }))
+                  }, null, 2)
+                );
+                
+                console.log(`Backed up chat data to ${chatDataBackupPath} for payment recovery`);
+              } catch (err) {
+                console.error('Error backing up chat data for payment recovery:', err);
+              }
+              
               // Process media files first (upload to R2)
               console.log('R2 connection successful');
               console.log('R2 connection successful, proceeding with media uploads');
@@ -388,17 +410,34 @@ export const uploadController = {
           const savedChatExport = await storage.saveChatExport(chatData);
 
           // Save messages to storage
+          console.log(`Saving ${chatData.messages.length} messages to storage for chat ${savedChatExport.id}`);
           for (const message of chatData.messages) {
-            await storage.saveMessage({
-              chatExportId: savedChatExport.id!,
-              timestamp: new Date(message.timestamp),
-              sender: message.sender,
-              content: message.content,
-              type: message.type,
-              mediaUrl: message.mediaUrl,
-              duration: message.duration,
-            });
+            try {
+              // Convert timestamp to ensure consistency
+              const timestamp = typeof message.timestamp === 'string' 
+                ? new Date(message.timestamp) 
+                : message.timestamp;
+                
+              await storage.saveMessage({
+                chatExportId: savedChatExport.id!,
+                timestamp: timestamp,
+                sender: message.sender,
+                content: message.content,
+                type: message.type,
+                mediaUrl: message.mediaUrl,
+                duration: message.duration,
+              });
+            } catch (err) {
+              console.error(`Error saving message: ${err}`);
+            }
           }
+          
+          // Verify messages were saved correctly
+          const savedMessages = await storage.getMessagesByChatExportId(savedChatExport.id!);
+          console.log(`Verified ${savedMessages.length} messages saved for chat ${savedChatExport.id}`);
+          
+          // Important: Update chatData with the saved messages to ensure they're included in the response
+          chatData.messages = savedMessages;
 
           // Process and upload media files to R2
           storage.saveProcessingProgress(clientId, 60, ProcessingStep.CONVERT_VOICE);
