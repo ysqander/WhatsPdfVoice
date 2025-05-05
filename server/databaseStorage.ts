@@ -139,23 +139,43 @@ export class DatabaseStorage implements IStorage {
 
   /**
    * Get processing progress
+   * Note: This is implemented as a synchronous function to match the interface,
+   * but internally uses a cached value to avoid blocking
    */
-  async getProcessingProgress(
+  getProcessingProgress(
     clientId: string,
-  ): Promise<{ progress: number; step?: number }> {
-    const [progress] = await db
-      .select()
-      .from(processingProgress)
-      .where(eq(processingProgress.clientId, clientId));
-
-    if (!progress) {
-      return { progress: 0 };
+  ): { progress: number; step?: number } {
+    // Start a non-blocking query to update the cached value for next time
+    this._refreshProcessingProgressCache(clientId);
+    
+    // Use the cached progress or default to 0
+    const cachedProgress = this._progressCache.get(clientId);
+    if (cachedProgress) {
+      return cachedProgress;
     }
-
-    return {
-      progress: progress.progress,
-      step: progress.step,
-    };
+    
+    return { progress: 0 };
+  }
+  
+  // Cache for progress values
+  private _progressCache: Map<string, { progress: number; step?: number }> = new Map();
+  
+  // Helper method to refresh the cache asynchronously
+  private _refreshProcessingProgressCache(clientId: string): void {
+    db.select()
+      .from(processingProgress)
+      .where(eq(processingProgress.clientId, clientId))
+      .then(([progress]) => {
+        if (progress) {
+          this._progressCache.set(clientId, {
+            progress: progress.progress,
+            step: progress.step,
+          });
+        }
+      })
+      .catch(error => {
+        console.error(`Error refreshing progress cache for ${clientId}:`, error);
+      });
   }
 
   /**
