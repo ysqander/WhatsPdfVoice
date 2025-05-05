@@ -362,6 +362,7 @@ export class PaymentService {
             }));
             
             // Update the full chat data for PDF generation
+            // @ts-ignore - Type mismatch is expected here, we're normalizing message formats
             reparsedChatData.messages = normalizedMessages;
             
             // Clean up temporary file

@@ -69,6 +69,22 @@ async function migrateDatabase() {
     }
     
     console.log("Created payment_bundles table");
+    
+    // Check if originalFileMediaId column exists, if not add it
+    const columnResult = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'payment_bundles' AND column_name = 'original_file_media_id';
+    `);
+    
+    if (columnResult.rowCount === 0) {
+      console.log("Adding original_file_media_id column to payment_bundles table");
+      await db.execute(sql`
+        ALTER TABLE "payment_bundles" 
+        ADD COLUMN "original_file_media_id" TEXT;
+      `);
+    }
+    
     console.log("Migration completed successfully!");
   } catch (error) {
     console.error("Error during migration:", error);

@@ -31,7 +31,7 @@ const clients = new Map<string, Response>();
  * @param extractDir Extract directory
  * @returns Path to the media file if found
  */
-function findMediaPath(filename: string, extractDir: string): string | undefined {
+export function findMediaPath(filename: string, extractDir: string): string | undefined {
   // First, try direct path in media directory
   const mediaDir = path.join(os.tmpdir(), 'whatspdf', 'media');
   const directPath = path.join(mediaDir, filename);
@@ -256,15 +256,34 @@ export const uploadController = {
             chatData.id = savedChatExport.id;
             
             try {
-              // Create a payment bundle first
+              // Store a copy of the original chat zip file to R2 for post-payment processing
+              // This is the key to making the system simpler - we'll just process the original zip again after payment
+              console.log(`Saving original chat zip file to R2: ${req.file!.path}`);
+              
+              // Upload the original zip file to R2 with a special marker
+              const zipMediaFile = await storage.uploadMediaToR2(
+                req.file!.path,
+                'application/zip',
+                savedChatExport.id!,
+                undefined, // Not linked to any message
+                'attachment', // Generic type
+                path.basename(req.file!.path), // Keep original filename
+                `ORIGINAL_ZIP_${savedChatExport.id}` // Special marker as fileHash
+              );
+              
+              console.log(`Uploaded original zip file to R2: key=${zipMediaFile.key}, id=${zipMediaFile.id}`);
+              
+              // Create a payment bundle with the reference to the original zip file
               const bundle = await paymentService.createPaymentBundle(
                 savedChatExport.id!,
                 chatData.messages.length,
-                totalMediaSize
+                totalMediaSize,
+                zipMediaFile.id // Store the media ID for the zip file
               );
               
               console.log('Created payment bundle:', {
-                bundleId: bundle.bundleId
+                bundleId: bundle.bundleId,
+                originalFileMediaId: zipMediaFile.id
               });
               
               // Save full chat data to a temporary file for recovery during payment
