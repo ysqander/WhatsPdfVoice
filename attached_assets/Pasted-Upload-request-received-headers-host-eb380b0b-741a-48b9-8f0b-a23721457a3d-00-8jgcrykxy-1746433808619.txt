@@ -1,0 +1,124 @@
+Upload request received: {
+  headers: {
+    host: 'eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'content-length': '438412',
+    accept: '*/*',
+    'accept-encoding': 'gzip, deflate, br, zstd',
+    'accept-language': 'en-GB,en;q=0.8',
+    'content-type': 'multipart/form-data; boundary=----WebKitFormBoundarygbJdsJDUlprOHeax',
+    cookie: '__stripe_mid=e9a76655-bc8c-4716-9b97-1ae2ea13c1efee7b8c; __stripe_sid=e00773f2-7f6c-425a-af7f-5d771532b46ee75d27',
+    origin: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev',
+    referer: 'https://eb380b0b-741a-48b9-8f0b-a23721457a3d-00-8jgcrykxyo77.worf.replit.dev/',
+    'sec-ch-ua': '"Brave";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'sec-gpc': '1',
+    'x-forwarded-for': '45.155.143.100, 10.83.2.236',
+    'x-forwarded-proto': 'https',
+    'x-replit-user-bio': '',
+    'x-replit-user-id': '',
+    'x-replit-user-name': '',
+    'x-replit-user-profile-image': '',
+    'x-replit-user-roles': '',
+    'x-replit-user-teams': '',
+    'x-replit-user-url': ''
+  },
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarygbJdsJDUlprOHeax',
+  file: {
+    originalname: 'WhatsApp Chat - more than 50 messages.zip',
+    size: 437973
+  },
+  body: [Object: null prototype] {
+    options: '{"includeVoiceMessages":true,"includeTimestamps":true,"highlightSenders":true,"includeImages":true,"includeAttachments":true}'
+  }
+}
+File details: {
+  originalname: 'WhatsApp Chat - more than 50 messages.zip',
+  mimetype: 'application/zip',
+  size: 437973,
+  path: '/tmp/whatspdf-uploads/file-1746433506953-41695372-a711-4845-b903-25d7f4ebae00.zip'
+}
+Waiting for SSE connection for clientId: eed9ea2e-20dc-43b5-a03b-74b1ab9a434a
+8:25:07 AM [express] POST /api/whatsapp/process 200 in 549ms :: {"clientId":"eed9ea2e-20dc-43b5-a03b…
+SSE connection established for clientId: eed9ea2e-20dc-43b5-a03b-74b1ab9a434a
+Starting background processing for clientId: eed9ea2e-20dc-43b5-a03b-74b1ab9a434a
+Starting parse for file: /tmp/whatspdf-uploads/file-1746433506953-41695372-a711-4845-b903-25d7f4ebae00.zip
+Looking for attachment: -0000007-AUDIO-2025-05-01-18-28-48.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/-0000007-AUDIO-2025-05-01-18-28-48.opus
+Looking for attachment: -0000003-AUDIO-2025-05-01-18-31-00.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/-0000003-AUDIO-2025-05-01-18-31-00.opus
+Looking for attachment: -0000001-AUDIO-2025-05-01-18-32-10.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/-0000001-AUDIO-2025-05-01-18-32-10.opus
+Looking for attachment: 00000002-AUDIO-2025-05-04-10-29-03.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000002-AUDIO-2025-05-04-10-29-03.opus
+Looking for attachment: 00000004-AUDIO-2025-05-04-10-29-35.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000004-AUDIO-2025-05-04-10-29-35.opus
+Looking for attachment: 00000005-AUDIO-2025-05-04-10-29-50.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000005-AUDIO-2025-05-04-10-29-50.opus
+Looking for attachment: 00000006-AUDIO-2025-05-04-10-30-08.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000006-AUDIO-2025-05-04-10-30-08.opus
+Looking for attachment: 00000008-AUDIO-2025-05-04-10-28-20.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000008-AUDIO-2025-05-04-10-28-20.opus
+Looking for attachment: 00000010-PHOTO-2025-05-04-10-53-14.jpg in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000010-PHOTO-2025-05-04-10-53-14.jpg
+Looking for attachment: 00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Found attachment: /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d/WhatsApp Chat - more than 50 messages/00000013-a89e0bcf_2d07_4959_bfbb_deb4d0b97756_1507e127-f564-48fd-8187-6cb13bdb0c4c.pdf
+Looking for attachment: 00000014-AUDIO-2025-05-04-11-16-48.opus in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Attachment not found: 00000014-AUDIO-2025-05-04-11-16-48.opus
+Looking for attachment: 00000015-PHOTO-2025-05-06-10-20-35.jpg in /tmp/whatspdf-temp/79045a68-1fe3-4c7b-968a-9274389ff09d
+Attachment not found: 00000015-PHOTO-2025-05-06-10-20-35.jpg
+Parsed chat export: {
+  messageCount: 85,
+  participantCount: 2,
+  firstMessageSample: {
+    timestamp: '2025-05-01T18:27:34',
+    sender: 'Iris Adamov',
+    content: 'Hi Alex, there’s mold coming back in the corner of the bedroom again. Can you please arrange for someone to look at it?',
+    type: 'text',
+    mediaUrl: undefined,
+    duration: undefined
+  },
+  options: {
+    includeVoiceMessages: true,
+    includeTimestamps: true,
+    highlightSenders: true,
+    includeImages: true,
+    includeAttachments: true
+  }
+}
+Parse completed successfully. Found 85 messages.
+Analyzing chat size. Messages: 85
+Total media size calculated: 428236 bytes (0.41MB)
+Chat exceeds free tier limits. Payment required.
+Error during background processing: error: null value in column "id" of relation "chat_exports" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.saveChatExport (/home/runner/workspace/server/databaseStorage.ts:36:26)
+    at async <anonymous> (/home/runner/workspace/server/controllers/uploadController.ts:316:29) {
+  length: 446,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (null, WhatsApp Chat - more than 50 messages.zip, a503404f5c2b9f178165187750f7cbefc5741a75c987645eaf910cc469012450, {"Iris Adamov","Alex (Yskandr)"}, 2025-05-05 08:25:07.724208, null, {"includeVoiceMessages":true,"includeTimestamps":true,"highlight...).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'chat_exports',
+  column: 'id',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2006',
+  routine: 'ExecConstraints'
+}
+Background processing finished for eed9ea2e-20dc-43b5-a03b-74b1ab9a434a. Elapsed time: 340ms
+Cleaned up uploaded file: /tmp/whatspdf-uploads/file-1746433506953-41695372-a711-4845-b903-25d7f4ebae00.zip
+8:25:07 AM [express] GET /api/whatsapp/process-status 200 in 225ms
+SSE connection closed for clientId: eed9ea2e-20dc-43b5-a03b-74b1ab9a434a
