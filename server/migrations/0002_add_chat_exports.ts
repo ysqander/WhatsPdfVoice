@@ -1,5 +1,17 @@
 
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+
+export const messages = pgTable("messages", {
+  id: integer("id").primaryKey(),
+  chatExportId: integer("chat_export_id").notNull(),
+  timestamp: timestamp("timestamp").notNull(),
+  sender: text("sender").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull(),
+  mediaUrl: text("media_url"),
+  duration: integer("duration"),
+  isDeleted: boolean("is_deleted").default(false)
+});
 
 export const mediaFiles = pgTable("media_files", {
   id: text("id").primaryKey(),

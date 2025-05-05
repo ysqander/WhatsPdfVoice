@@ -2,6 +2,19 @@ import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Messages table
+export const messages = pgTable("messages", {
+  id: integer("id").primaryKey(),
+  chatExportId: integer("chat_export_id").notNull(),
+  timestamp: timestamp("timestamp").notNull(),
+  sender: text("sender").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull(),
+  mediaUrl: text("media_url"),
+  duration: integer("duration"),
+  isDeleted: boolean("is_deleted").default(false)
+});
+
 // Media files table
 export const mediaFiles = pgTable("media_files", {
   id: text("id").primaryKey(),
