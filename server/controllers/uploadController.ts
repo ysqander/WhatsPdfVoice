@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
+import { mediaProxyStorage } from "../mediaProxyStorage";
 import { MediaFile, Message as SchemaMessage } from "@shared/schema"; // Ensure Message type is imported if needed elsewhere
 import { parse } from "../lib/parser";
 import { generatePdf } from "../lib/pdf";
