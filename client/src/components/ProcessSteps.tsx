@@ -1,4 +1,4 @@
-import { FileUp, Cog, Download } from "lucide-react";
+import { FileUp, Cog, Download } from 'lucide-react'
 
 export default function ProcessSteps() {
   return (
@@ -10,7 +10,10 @@ export default function ProcessSteps() {
               <FileUp className="w-5 h-5" />
             </div>
             <h3 className="font-bold mb-2">Upload</h3>
-            <p className="text-sm text-gray-600">Upload your WhatsApp chat export ZIP file containing conversation data and media.</p>
+            <p className="text-sm text-gray-600">
+              Upload your WhatsApp chat export ZIP file containing conversation
+              data and media.
+            </p>
           </div>
         </div>
         <div className="w-full md:w-1/3 px-2 mb-4 md:mb-0">
@@ -19,7 +22,10 @@ export default function ProcessSteps() {
               <Cog className="w-5 h-5" />
             </div>
             <h3 className="font-bold mb-2">Process</h3>
-            <p className="text-sm text-gray-600">Our system extracts messages and converts voice notes to interactive audio elements.</p>
+            <p className="text-sm text-gray-600">
+              Our system extracts messages and converts voice notes to
+              interactive audio elements.
+            </p>
           </div>
         </div>
         <div className="w-full md:w-1/3 px-2">
@@ -28,10 +34,13 @@ export default function ProcessSteps() {
               <Download className="w-5 h-5" />
             </div>
             <h3 className="font-bold mb-2">Download</h3>
-            <p className="text-sm text-gray-600">Download your court-admissible PDF with timestamps, sender highlighting, and playable voice notes.</p>
+            <p className="text-sm text-gray-600">
+              Download your court-admissible PDF with timestamps, sender
+              highlighting, and playable voice notes.
+            </p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

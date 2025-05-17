@@ -1,123 +1,123 @@
-import { useState, useRef } from "react";
-import { UploadCloud, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
+import { useState, useRef } from 'react'
+import { UploadCloud, X } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { Progress } from '@/components/ui/progress'
 
 interface FileUploadProps {
-  file: File | null;
-  setFile: (file: File | null) => void;
-  isUploading: boolean;
-  setIsUploading: (isUploading: boolean) => void;
-  uploadProgress: number;
-  setUploadProgress: (progress: number) => void;
-  resetState: () => void;
+  file: File | null
+  setFile: (file: File | null) => void
+  isUploading: boolean
+  setIsUploading: (isUploading: boolean) => void
+  uploadProgress: number
+  setUploadProgress: (progress: number | ((prev: number) => number)) => void
+  resetState: () => void
 }
 
 export default function FileUpload({
   file,
   setFile,
-  isUploading,
+  isUploading: _isUploading,
   setIsUploading,
   uploadProgress,
   setUploadProgress,
-  resetState
+  resetState,
 }: FileUploadProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const { toast } = useToast();
-  
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const { toast } = useToast()
+
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
     }
-  };
+  }
 
   const validateFile = (file: File): boolean => {
     // Check if it's a ZIP file
     if (!file.name.toLowerCase().endsWith('.zip')) {
       toast({
-        variant: "destructive",
-        title: "Invalid File Type",
-        description: "Please upload a WhatsApp export ZIP file.",
-      });
-      return false;
+        variant: 'destructive',
+        title: 'Invalid File Type',
+        description: 'Please upload a WhatsApp export ZIP file.',
+      })
+      return false
     }
-    
+
     // Check file size (100MB limit)
     if (file.size > 100 * 1024 * 1024) {
       toast({
-        variant: "destructive",
-        title: "File Too Large",
-        description: "Please upload a file smaller than 100MB.",
-      });
-      return false;
+        variant: 'destructive',
+        title: 'File Too Large',
+        description: 'Please upload a file smaller than 100MB.',
+      })
+      return false
     }
-    
-    return true;
-  };
+
+    return true
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const droppedFile = e.dataTransfer.files[0];
+      const droppedFile = e.dataTransfer.files[0]
       if (validateFile(droppedFile)) {
-        handleFileSelection(droppedFile);
+        handleFileSelection(droppedFile)
       }
     }
-  };
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0];
+      const selectedFile = e.target.files[0]
       if (validateFile(selectedFile)) {
-        handleFileSelection(selectedFile);
+        handleFileSelection(selectedFile)
       }
     }
-  };
+  }
 
   const handleFileSelection = (selectedFile: File) => {
-    resetState();
-    setFile(selectedFile);
-    simulateUpload();
-  };
+    resetState()
+    setFile(selectedFile)
+    simulateUpload()
+  }
 
   const simulateUpload = () => {
-    setIsUploading(true);
-    setUploadProgress(0);
-    
+    setIsUploading(true)
+    setUploadProgress(0)
+
     // Simulate upload progress
     const interval = setInterval(() => {
-      setUploadProgress(prev => {
+      setUploadProgress((prev: number) => {
         if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
+          clearInterval(interval)
+          setIsUploading(false)
+          return 100
         }
-        return prev + 5;
-      });
-    }, 100);
-  };
+        return prev + 5
+      })
+    }, 100)
+  }
 
   const handleRemoveFile = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = ''
     }
-    resetState();
-  };
+    resetState()
+  }
 
   return (
     <div>
-      <div 
+      <div
         className={`border-2 border-dashed rounded-lg p-6 text-center hover:border-accent transition-colors cursor-pointer ${
-          dragActive ? "border-accent bg-accent/5" : "border-gray-300"
+          dragActive ? 'border-accent bg-accent/5' : 'border-gray-300'
         }`}
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
@@ -125,11 +125,11 @@ export default function FileUpload({
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
       >
-        <input 
-          type="file" 
+        <input
+          type="file"
           ref={fileInputRef}
-          className="hidden" 
-          accept=".zip" 
+          className="hidden"
+          accept=".zip"
           onChange={handleFileSelect}
         />
         <UploadCloud className="h-10 w-10 text-gray-400 mx-auto mb-3" />
@@ -147,21 +147,23 @@ export default function FileUpload({
         <div className="mt-4">
           <div className="flex items-center mb-2">
             <i className="fas fa-file-archive text-lg text-gray-500 mr-2"></i>
-            <span className="mr-auto font-medium text-sm truncate">{file.name}</span>
-            <button 
+            <span className="mr-auto font-medium text-sm truncate">
+              {file.name}
+            </span>
+            <button
               className="text-red-500 hover:text-red-700 transition-colors"
               onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveFile();
+                e.stopPropagation()
+                handleRemoveFile()
               }}
             >
               <X size={16} />
             </button>
           </div>
-          
+
           <Progress value={uploadProgress} className="h-2.5 mb-4" />
         </div>
       )}
     </div>
-  );
+  )
 }

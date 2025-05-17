@@ -1,78 +1,83 @@
-import { useState, useEffect } from 'react';
-import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-import { apiRequest } from "../lib/queryClient";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Loader2 } from 'lucide-react';
-import { useToast } from "../hooks/use-toast";
-
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+import { useState, useEffect } from 'react'
+import { apiRequest } from '../lib/queryClient'
+import { Button } from './ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './ui/card'
+import { Loader2 } from 'lucide-react'
+import { useToast } from '../hooks/use-toast'
 
 interface CheckoutFormProps {
-  bundleId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  bundleId: string
+  onCancel: () => void
 }
 
-const CheckoutForm = ({ bundleId, onSuccess, onCancel }: CheckoutFormProps) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const { toast } = useToast();
-  
+const CheckoutForm = ({ bundleId, onCancel }: CheckoutFormProps) => {
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
+  const { toast } = useToast()
+
   useEffect(() => {
     // Create payment intent when component mounts
     const getCheckoutUrl = async () => {
       try {
-        setIsProcessing(true);
-        const response = await apiRequest('POST', '/api/create-payment-intent', { 
-          bundleId 
-        });
-        
+        setIsProcessing(true)
+        const response = await apiRequest(
+          'POST',
+          '/api/create-payment-intent',
+          {
+            bundleId,
+          },
+        )
+
         if (!response.ok) {
-          throw new Error('Failed to create payment intent');
+          throw new Error('Failed to create payment intent')
         }
-        
-        const data = await response.json();
+
+        const data = await response.json()
         if (data.checkoutUrl) {
-          setCheckoutUrl(data.checkoutUrl);
+          setCheckoutUrl(data.checkoutUrl)
         } else {
-          throw new Error('No checkout URL returned');
+          throw new Error('No checkout URL returned')
         }
       } catch (error) {
-        console.error('Error creating payment intent:', error);
+        console.error('Error creating payment intent:', error)
         toast({
-          title: "Payment Error",
-          description: "Unable to initialize checkout. Please try again.",
-          variant: "destructive"
-        });
+          title: 'Payment Error',
+          description: 'Unable to initialize checkout. Please try again.',
+          variant: 'destructive',
+        })
       } finally {
-        setIsProcessing(false);
+        setIsProcessing(false)
       }
-    };
-    
-    getCheckoutUrl();
-  }, [bundleId, toast]);
-  
+    }
+
+    getCheckoutUrl()
+  }, [bundleId, toast])
+
   const handleProceedToCheckout = () => {
     if (checkoutUrl) {
-      console.log(`Proceeding to Stripe checkout: ${checkoutUrl}`);
+      console.log(`Proceeding to Stripe checkout: ${checkoutUrl}`)
       // Track that we're starting a checkout process
-      localStorage.setItem('whats_pdf_checkout_started', 'true');
-      localStorage.setItem('whats_pdf_bundle_id', bundleId);
-      
-      window.location.href = checkoutUrl;
+      localStorage.setItem('whats_pdf_checkout_started', 'true')
+      localStorage.setItem('whats_pdf_bundle_id', bundleId)
+
+      window.location.href = checkoutUrl
     }
-  };
-  
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Complete Your Purchase</CardTitle>
         <CardDescription>
-          Pay securely through Stripe to download your WhatsApp Chat Export with all media files.
+          Pay securely through Stripe to download your WhatsApp Chat Export with
+          all media files.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,8 +101,8 @@ const CheckoutForm = ({ bundleId, onSuccess, onCancel }: CheckoutFormProps) => {
         <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleProceedToCheckout} 
+        <Button
+          onClick={handleProceedToCheckout}
           disabled={isProcessing || !checkoutUrl}
         >
           {isProcessing ? (
@@ -106,26 +111,19 @@ const CheckoutForm = ({ bundleId, onSuccess, onCancel }: CheckoutFormProps) => {
               Processing
             </>
           ) : (
-            "Proceed to Checkout"
+            'Proceed to Checkout'
           )}
         </Button>
       </CardFooter>
     </Card>
-  );
-};
-
-interface CheckoutProps {
-  bundleId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  )
 }
 
-export default function Checkout({ bundleId, onSuccess, onCancel }: CheckoutProps) {
-  return (
-    <CheckoutForm 
-      bundleId={bundleId} 
-      onSuccess={onSuccess} 
-      onCancel={onCancel} 
-    />
-  );
+interface CheckoutProps {
+  bundleId: string
+  onCancel: () => void
+}
+
+export default function Checkout({ bundleId, onCancel }: CheckoutProps) {
+  return <CheckoutForm bundleId={bundleId} onCancel={onCancel} />
 }

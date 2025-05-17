@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -10,13 +10,17 @@ export default function Footer() {
               <FileText className="w-6 h-6 mr-2" />
               WhatsPDF Voice
             </h2>
-            <p className="text-sm text-gray-300 mt-1">Convert WhatsApp chats to court-admissible PDFs</p>
+            <p className="text-sm text-gray-300 mt-1">
+              Convert WhatsApp chats to court-admissible PDFs
+            </p>
           </div>
           <div>
-            <p className="text-sm text-gray-300">© {new Date().getFullYear()} WhatsPDF Voice. All rights reserved.</p>
+            <p className="text-sm text-gray-300">
+              © {new Date().getFullYear()} WhatsPDF Voice. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
     </footer>
-  );
+  )
 }

@@ -1,67 +1,68 @@
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { DollarSign, ExternalLink, FileText, File, MessageSquare } from "lucide-react";
-import { useState } from "react";
-import { FREE_TIER_MESSAGE_LIMIT, FREE_TIER_MEDIA_SIZE_LIMIT } from "@shared/types";
-import Checkout from "./Checkout";
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
+import {
+  DollarSign,
+  ExternalLink,
+  FileText,
+  File,
+  MessageSquare,
+} from 'lucide-react'
+import { useState } from 'react'
+import {
+  FREE_TIER_MESSAGE_LIMIT,
+  FREE_TIER_MEDIA_SIZE_LIMIT,
+} from '@shared/types'
+import Checkout from './Checkout'
 
 interface PaymentRequiredProps {
-  messageCount: number;
-  mediaSizeBytes: number;
-  bundleId: string;
-  checkoutUrl: string | null;
-  onPaymentComplete?: () => void;
+  messageCount: number
+  mediaSizeBytes: number
+  bundleId: string
+  onPaymentComplete?: () => void
 }
 
 export default function PaymentRequired({
   messageCount,
   mediaSizeBytes,
   bundleId,
-  checkoutUrl,
-  onPaymentComplete
+  onPaymentComplete,
 }: PaymentRequiredProps) {
-  const { toast } = useToast();
-  const [isShowingCheckout, setIsShowingCheckout] = useState(false);
-  
-  const mediaSize = (mediaSizeBytes / (1024 * 1024)).toFixed(1); // Convert to MB
-  
+  const { toast } = useToast()
+  const [isShowingCheckout, setIsShowingCheckout] = useState(false)
+
+  const mediaSize = (mediaSizeBytes / (1024 * 1024)).toFixed(1) // Convert to MB
+
   const handleContinueToPayment = () => {
     if (!bundleId) {
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No payment bundle found"
-      });
-      return;
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No payment bundle found',
+      })
+      return
     }
-    
-    setIsShowingCheckout(true);
-  };
+
+    setIsShowingCheckout(true)
+  }
 
   const handlePaymentSuccess = () => {
     toast({
-      title: "Payment Successful",
-      description: "Your payment has been processed successfully."
-    });
-    
+      title: 'Payment Successful',
+      description: 'Your payment has been processed successfully.',
+    })
+
     if (onPaymentComplete) {
-      onPaymentComplete();
+      onPaymentComplete()
     }
-  };
+  }
 
   const handlePaymentCancel = () => {
-    setIsShowingCheckout(false);
-  };
+    setIsShowingCheckout(false)
+  }
 
   // If we're showing the checkout component
   if (isShowingCheckout) {
-    return (
-      <Checkout 
-        bundleId={bundleId} 
-        onSuccess={handlePaymentSuccess} 
-        onCancel={handlePaymentCancel} 
-      />
-    );
+    return <Checkout bundleId={bundleId} onCancel={handlePaymentCancel} />
   }
 
   // Otherwise show the payment required information
@@ -70,18 +71,18 @@ export default function PaymentRequired({
       <div className="bg-accent text-white py-3 px-4">
         <h2 className="text-lg font-semibold">Payment Required</h2>
       </div>
-      
+
       <div className="p-5">
         <div className="flex items-center justify-center mb-5">
           <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center">
             <DollarSign className="w-12 h-12 text-amber-500" />
           </div>
         </div>
-        
+
         <h3 className="text-lg font-medium text-center mb-3">
           Your chat export exceeds free tier limits
         </h3>
-        
+
         <div className="bg-gray-50 p-4 rounded-lg mb-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center">
@@ -89,14 +90,14 @@ export default function PaymentRequired({
               <div>
                 <p className="text-sm text-gray-500">Messages</p>
                 <p className="font-medium">
-                  {messageCount} 
+                  {messageCount}
                   <span className="text-xs text-gray-500 ml-1">
                     (Limit: {FREE_TIER_MESSAGE_LIMIT})
                   </span>
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <File className="w-5 h-5 mr-2 text-gray-500" />
               <div>
@@ -111,9 +112,9 @@ export default function PaymentRequired({
             </div>
           </div>
         </div>
-        
+
         <div className="mb-5">
-          <h4 className="font-medium mb-2">What you'll get:</h4>
+          <h4 className="font-medium mb-2">What you&apos;ll get:</h4>
           <ul className="space-y-2 text-sm">
             <li className="flex items-start">
               <FileText className="w-4 h-4 mr-2 text-primary mt-0.5" />
@@ -121,7 +122,9 @@ export default function PaymentRequired({
             </li>
             <li className="flex items-start">
               <File className="w-4 h-4 mr-2 text-primary mt-0.5" />
-              <span>All media files from your conversation ({mediaSize} MB)</span>
+              <span>
+                All media files from your conversation ({mediaSize} MB)
+              </span>
             </li>
             <li className="flex items-start">
               <ExternalLink className="w-4 h-4 mr-2 text-primary mt-0.5" />
@@ -129,19 +132,19 @@ export default function PaymentRequired({
             </li>
           </ul>
         </div>
-        
-        <Button 
+
+        <Button
           className="w-full bg-accent hover:bg-accent/90"
           size="lg"
           onClick={handleContinueToPayment}
         >
           Continue to Payment ($9)
         </Button>
-        
+
         <p className="text-xs text-center text-gray-500 mt-3">
           Secure payment processed by Stripe
         </p>
       </div>
     </div>
-  );
+  )
 }

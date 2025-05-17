@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText } from 'lucide-react'
 
 export default function Header() {
   return (
@@ -9,11 +9,14 @@ export default function Header() {
           <h1 className="text-2xl font-bold">WhatsPDF Voice</h1>
         </div>
         <div>
-          <a href="#" className="text-white hover:text-accent transition-colors">
+          <a
+            href="#"
+            className="text-white hover:text-accent transition-colors"
+          >
             <i className="fas fa-question-circle mr-1"></i> Help
           </a>
         </div>
       </div>
     </header>
-  );
+  )
 }

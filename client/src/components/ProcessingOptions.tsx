@@ -1,10 +1,10 @@
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { ProcessingOptions as ProcessingOptionsType } from "@shared/types";
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { ProcessingOptions as ProcessingOptionsType } from '@shared/types'
 
 interface ProcessingOptionsProps {
-  options: ProcessingOptionsType;
-  setOptions: (options: ProcessingOptionsType) => void;
+  options: ProcessingOptionsType
+  setOptions: (options: ProcessingOptionsType) => void
 }
 
 export default function ProcessingOptions({
@@ -15,8 +15,8 @@ export default function ProcessingOptions({
     setOptions({
       ...options,
       [option]: !options[option],
-    });
-  };
+    })
+  }
 
   return (
     <div className="mt-4">
@@ -26,7 +26,7 @@ export default function ProcessingOptions({
           <Checkbox
             id="includeTimestamps"
             checked={options.includeTimestamps}
-            onCheckedChange={() => handleOptionChange("includeTimestamps")}
+            onCheckedChange={() => handleOptionChange('includeTimestamps')}
           />
           <Label htmlFor="includeTimestamps" className="text-sm">
             Include timestamps
@@ -37,7 +37,7 @@ export default function ProcessingOptions({
           <Checkbox
             id="highlightSenders"
             checked={options.highlightSenders}
-            onCheckedChange={() => handleOptionChange("highlightSenders")}
+            onCheckedChange={() => handleOptionChange('highlightSenders')}
           />
           <Label htmlFor="highlightSenders" className="text-sm">
             Highlight message senders
@@ -47,7 +47,7 @@ export default function ProcessingOptions({
           <Checkbox
             id="includeVoiceMessages"
             checked={options.includeVoiceMessages}
-            onCheckedChange={() => handleOptionChange("includeVoiceMessages")}
+            onCheckedChange={() => handleOptionChange('includeVoiceMessages')}
           />
           <Label htmlFor="includeVoiceMessages" className="text-sm">
             Include voice messages
@@ -58,7 +58,7 @@ export default function ProcessingOptions({
           <Checkbox
             id="includeImages"
             checked={options.includeImages}
-            onCheckedChange={() => handleOptionChange("includeImages")}
+            onCheckedChange={() => handleOptionChange('includeImages')}
           />
           <Label htmlFor="includeImages" className="text-sm">
             Include images
@@ -69,7 +69,7 @@ export default function ProcessingOptions({
           <Checkbox
             id="includeAttachments"
             checked={options.includeAttachments}
-            onCheckedChange={() => handleOptionChange("includeAttachments")}
+            onCheckedChange={() => handleOptionChange('includeAttachments')}
           />
           <Label htmlFor="includeAttachments" className="text-sm">
             Include other attachments
@@ -77,5 +77,5 @@ export default function ProcessingOptions({
         </div>
       </div>
     </div>
-  );
+  )
 }

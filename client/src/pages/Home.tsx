@@ -41,7 +41,7 @@ export default function Home() {
       highlightSenders: true,
       includeImages: false,
       includeAttachments: false,
-    }
+    },
   )
 
   // Payment-related state
@@ -84,7 +84,7 @@ export default function Home() {
           if (data.chatExportId) {
             try {
               const chatResponse = await fetch(
-                `/api/whatsapp/chat/${data.chatExportId}`
+                `/api/whatsapp/chat/${data.chatExportId}`,
               )
               if (chatResponse.ok) {
                 const chatData = await chatResponse.json()
@@ -103,20 +103,20 @@ export default function Home() {
           setPollingAttempts(attempts)
           pollingTimeoutRef.current = setTimeout(
             poll,
-            intervals[attempts - 1] || 15000
+            intervals[attempts - 1] || 15000,
           )
         } else {
           setIsPolling(false)
           setShowRepair(true)
           setPollingError(
-            'Your payment was successful, but the download is not ready yet. You can retry repair below or contact support.'
+            'Your payment was successful, but the download is not ready yet. You can retry repair below or contact support.',
           )
         }
       } catch (err) {
         setIsPolling(false)
         setShowRepair(true)
         setPollingError(
-          'Error checking payment status. Please try again or use the repair option below.'
+          'Error checking payment status. Please try again or use the repair option below.',
         )
       }
     }
@@ -146,7 +146,7 @@ export default function Home() {
           if (repairData.chatExportId) {
             try {
               const chatResponse = await fetch(
-                `/api/whatsapp/chat/${repairData.chatExportId}`
+                `/api/whatsapp/chat/${repairData.chatExportId}`,
               )
               if (chatResponse.ok) {
                 const chatData = await chatResponse.json()
@@ -162,19 +162,19 @@ export default function Home() {
           return
         } else {
           setPollingError(
-            'Repair did not succeed. Please try again or contact support.'
+            'Repair did not succeed. Please try again or contact support.',
           )
           setShowRepair(true)
         }
       } else {
         setPollingError(
-          'Repair request failed. Please try again or contact support.'
+          'Repair request failed. Please try again or contact support.',
         )
         setShowRepair(true)
       }
     } catch (err) {
       setPollingError(
-        'Repair request failed. Please try again or contact support.'
+        'Repair request failed. Please try again or contact support.',
       )
       setShowRepair(true)
     }
@@ -241,7 +241,7 @@ export default function Home() {
     setPdfUrl(null)
     setChatData(null)
     setProcessingSteps(
-      processingSteps.map((step) => ({ ...step, done: false }))
+      processingSteps.map((step) => ({ ...step, done: false })),
     )
   }
 
@@ -303,7 +303,6 @@ export default function Home() {
                   messageCount={messageCount}
                   mediaSizeBytes={mediaSizeBytes}
                   bundleId={bundleId || ''}
-                  checkoutUrl={checkoutUrl}
                   onPaymentComplete={() => {
                     setRequiresPayment(false)
                     setIsFileProcessed(true)

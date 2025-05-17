@@ -99,8 +99,8 @@ async function generatePdfWithPdfLib(
   )
 
   // --- Fetch Media File Data (Still Needed for Summary Page) ---
-  let mediaFilesMap = new Map<string, MediaFile>() // Map media file ID -> MediaFile
-  let messageToMediaMap = new Map<string, MediaFile>() // Map message ID -> MediaFile
+  const mediaFilesMap = new Map<string, MediaFile>() // Map media file ID -> MediaFile
+  const messageToMediaMap = new Map<string, MediaFile>() // Map message ID -> MediaFile
 
   if (chatData.id) {
     try {
@@ -863,7 +863,7 @@ function drawWrappedText(
     let remainingText = paragraph
     while (remainingText.length > 0) {
       let line = ''
-      let words = remainingText.split(' ')
+      const words = remainingText.split(' ')
       let currentLine = ''
       let consumedLength = 0 // Track consumed length for accurate substring
 
@@ -1019,7 +1019,7 @@ function estimateLines(
     while (remainingText.length > 0) {
       totalLines++ // Count this line
       let currentLine = ''
-      let words = remainingText.split(' ')
+      const words = remainingText.split(' ')
       let consumedLength = 0
 
       for (let i = 0; i < words.length; i++) {
@@ -1125,7 +1125,7 @@ async function drawMediaLink(
 ): Promise<number> {
   // Determine the media type display label
   let mediaTypeLabel = 'File'
-  let icon = '' // Safe fallback, emojis unreliable
+  const icon = '' // Safe fallback, emojis unreliable
 
   if (message.type === 'image') {
     mediaTypeLabel = 'Image'
