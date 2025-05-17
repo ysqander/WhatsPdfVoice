@@ -2,7 +2,7 @@ import { db } from './db'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
 import fs from 'fs'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import {
   type ChatExport,
   type Message,

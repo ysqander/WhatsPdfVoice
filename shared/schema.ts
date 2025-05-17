@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import type { ProcessingOptions } from "./types";
 
 // Processing progress table
 export const processingProgress = pgTable("processing_progress", {
@@ -108,7 +109,7 @@ export type ChatExport = {
   participants?: string[];
   generatedAt?: Date;
   pdfUrl?: string;
-  processingOptions: any;
+  processingOptions: ProcessingOptions;
   messages?: Message[];
 };
 
@@ -117,7 +118,7 @@ export type InsertChatExport = {
   fileHash: string;
   participants?: string[];
   pdfUrl?: string;
-  processingOptions: any;
+  processingOptions: ProcessingOptions;
 };
 
 export type Message = {

@@ -4,12 +4,7 @@ import { mediaProxyStorage } from '../mediaProxyStorage'
 import { MediaFile, Message as SchemaMessage } from '@shared/schema' // Ensure Message type is imported if needed elsewhere
 import { parse } from '../lib/parser'
 import { generatePdf } from '../lib/pdf'
-import {
-  ProcessingOptions,
-  ProcessingStep,
-  FREE_TIER_MESSAGE_LIMIT,
-  FREE_TIER_MEDIA_SIZE_LIMIT,
-} from '@shared/types'
+import { ProcessingOptions, ProcessingStep } from '@shared/types'
 import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs'
 import path from 'path'
@@ -17,11 +12,9 @@ import crypto from 'crypto'
 import archiver from 'archiver'
 import os from 'os'
 import { format } from 'date-fns'
-import { testR2Connection, getSignedR2Url } from '../lib/r2Storage' // getSignedR2Url might not be needed directly here anymore
+import { testR2Connection } from '../lib/r2Storage'
 import { paymentService } from '../lib/paymentService'
 import { isPaymentRequired } from '../lib/paymentHelper' // Removed unused calculateMediaSize, handlePaymentCheck
-import { db } from '../db'
-import { eq } from 'drizzle-orm'
 import { getAppBaseUrl } from '../lib/appBaseUrl'
 
 // Map to store client connections for SSE
@@ -70,11 +63,11 @@ export function findMediaPath(
                 return fullPath
               }
             }
-          } catch (statErr) {
+          } catch {
             // Ignore files we can't stat (e.g., permissions issues)
           }
         }
-      } catch (readDirErr) {
+      } catch {
         // Ignore directories we can't read
       }
       return undefined

@@ -1,6 +1,6 @@
 import { FREE_TIER_MESSAGE_LIMIT, FREE_TIER_MEDIA_SIZE_LIMIT } from "../../shared/types";
 import { paymentService } from "./paymentService";
-import type { ChatExport, Message } from "../../shared/types";
+import type { ChatExport } from "../../shared/types";
 import type { MediaFile } from "../../shared/schema";
 
 /**

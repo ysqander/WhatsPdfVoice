@@ -1,9 +1,8 @@
 import { db } from "./db";
-import { eq, lt, and, or, sql } from "drizzle-orm";
+import { eq, lt, and, sql } from "drizzle-orm";
 import { 
   mediaProxyFiles,
   type MediaProxyFile,
-  type InsertMediaProxyFile,
   type MediaFile
 } from "@shared/schema";
 import { getSignedR2Url, deleteFileFromR2 } from "./lib/r2Storage";

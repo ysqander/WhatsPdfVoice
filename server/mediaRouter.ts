@@ -1,8 +1,5 @@
 import { Router, Request, Response } from 'express'
 import { mediaProxyStorage } from './mediaProxyStorage'
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 
 const router = Router()
 

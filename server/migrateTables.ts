@@ -1,5 +1,4 @@
 import { db } from "./db";
-import { mediaProxyFiles } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 async function migrateDatabase() {

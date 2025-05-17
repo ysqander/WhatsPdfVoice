@@ -8,9 +8,6 @@ import { mediaProxyStorage } from '../mediaProxyStorage'
 import { generatePdf } from './pdf'
 import { getSignedR2Url } from './r2Storage'
 import fs from 'fs'
-import path from 'path'
-import os from 'os'
-import { ChatExport, Message } from '../../shared/types' // Using types from shared/types
 import { getAppBaseUrl } from './appBaseUrl'
 
 // Ensure Stripe API key is available
@@ -271,7 +268,6 @@ export class PaymentService {
     }
 
     // Step 2: Check if a valid PDF (linked via proxy) already exists
-    let pdfAlreadyLinked = false
     if (chatExport.pdfUrl && chatExport.pdfUrl.includes('/api/media/proxy/')) {
       try {
         const mediaId = chatExport.pdfUrl.split('/').pop()
@@ -286,7 +282,6 @@ export class PaymentService {
             // Optionally, verify the file exists in R2
             try {
               await getSignedR2Url(mediaFile.key)
-              pdfAlreadyLinked = true
               console.log(
                 `[PaymentService] Valid PDF URL ${chatExport.pdfUrl} already exists for chat ${chatExportId}. Skipping regeneration.`
               )

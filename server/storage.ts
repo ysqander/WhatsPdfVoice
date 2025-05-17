@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
-import { ProcessingOptions } from '@shared/types'
 import path from 'path'
 import os from 'os'
 import fs from 'fs'
@@ -131,7 +129,7 @@ export class MemStorage implements IStorage {
     }
 
     const entries = Array.from(this.chatExports.entries())
-    const [_, latestChatExport] = entries.reduce((latest, current) => {
+    const [, latestChatExport] = entries.reduce((latest, current) => {
       return latest[0] > current[0] ? latest : current
     })
 
@@ -237,7 +235,7 @@ export class MemStorage implements IStorage {
         )
         return mediaProxy.r2Url
       }
-    } catch (err) {
+    } catch {
       console.log('Media not found in database, falling back to memory storage')
     }
     // Fallback to in-memory if not in database
@@ -268,7 +266,7 @@ export class MemStorage implements IStorage {
         this.mediaFiles.delete(mediaId)
         return true
       }
-    } catch (err) {
+    } catch {
       console.log('Media not found in database, falling back to memory storage')
     }
 
@@ -317,7 +315,7 @@ export class MemStorage implements IStorage {
           // Fallback to direct refresh if not in database
           media.url = await getSignedR2Url(media.key)
         }
-      } catch (err) {
+      } catch {
         // If that fails, try direct refresh
         if (!media.url) {
           media.url = await getSignedR2Url(media.key)
@@ -353,7 +351,7 @@ export class MemStorage implements IStorage {
           return mediaProxyStorage.convertToMediaFile(mediaProxy)
         }
       }
-    } catch (err) {
+    } catch {
       console.log('Media not found in database, falling back to memory storage')
     }
 
@@ -416,7 +414,7 @@ export class MemStorage implements IStorage {
             )
             mediaId = mediaProxy.id
           }
-        } catch (err) {
+        } catch {
           console.log('Failed to update existing media proxy, creating new one')
           // Determine content type from message
           let contentType = 'application/octet-stream'
