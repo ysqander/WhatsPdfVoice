@@ -32,6 +32,13 @@ This document provides guidelines for developers and AI agents working on the Wh
 - Ensure all tests pass before committing. Update tests when refactoring related code.
 - Add or update tests for the code you change, even if nobody asked.
 
+## Linting Instructions
+
+- Run linting to check for errors and warnings:
+  ```bash
+  npx eslint .
+  ```
+
 ## PR instructions
 Title format: `[client|server|shared|infra|docs] Short descriptive title`
 Example: `[client] Fix PDF rendering issue on mobile`
