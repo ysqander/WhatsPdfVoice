@@ -74,3 +74,31 @@ A developer fixing this should ensure:
 
 ---
 
+
+## Investigation Notes
+
+### Documents involved in the paid processing path
+- `server/controllers/uploadController.ts` – handles the upload flow and creates payment bundles when limits are exceeded.
+- `server/lib/paymentService.ts` – contains the `ensurePdfGeneratedAndLinked` method which performs post‑payment PDF generation and linking.
+- `server/lib/pdf.ts` – builds the PDF and determines media links.
+- `server/storage.ts` and `server/databaseStorage.ts` – persist chat exports, messages and media URLs.
+- `server/mediaProxyStorage.ts` – creates proxy records for R2 files.
+- `server/routes.ts` – exposes payment and repair endpoints.
+- `client/src/pages/Home.tsx` – polls for the PDF after checkout.
+
+### Hypotheses for why the paid flow fails
+1. Proxy URLs stored before payment are not used when generating the final PDF.
+2. `ensurePdfGeneratedAndLinked` fails to save the generated PDF URL back to the `ChatExport` record.
+3. Messages are not properly retrieved from the database after payment so the PDF generation step runs with incomplete data.
+4. The status endpoint `/api/payment/:bundleId` may return before the PDF URL is saved, causing the client polling loop to never see it.
+
+### Test Suite
+Tests were added under `server/__tests__/paymentService.test.ts` to validate the service logic:
+- **saves a PDF URL after generation** – ensures that `ensurePdfGeneratedAndLinked` writes a proxy URL to the database.
+- **uses proxy URLs in messages when generating PDF** – verifies that messages passed to `generatePdf` already contain proxy URLs.
+
+Run all tests with:
+```bash
+npx vitest
+```
+
