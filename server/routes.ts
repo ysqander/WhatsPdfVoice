@@ -459,11 +459,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     )
   }
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2023-10-16' as any,
+    apiVersion: '2023-10-16',
   })
 
   // Webhook signing secret - would come from Stripe dashboard in production
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
   // Checkout routes
   app.post('/api/create-payment-intent', async (req, res) => {

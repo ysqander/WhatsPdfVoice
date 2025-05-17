@@ -680,11 +680,11 @@ async function generatePdfWithPdfLib(
     fs.writeFileSync(pdfPath, pdfBytes)
     console.log('PDF file written successfully to:', pdfPath)
     console.log('PDF details:', { pdfId, size: pdfBytes.length })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error writing PDF file:', error)
-    throw new Error(
-      `Failed to write PDF file: ${error.message || String(error)}`
-    )
+    const message =
+      error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to write PDF file: ${message}`)
   }
 
   return { pdfPath, pdfId }
@@ -699,8 +699,7 @@ function drawPdfHeader(
   textFont: PDFFont,
   boldFont: PDFFont,
   pageWidth: number,
-  startY: number,
-  pdfDoc?: PDFDocument // Optional pdfDoc for future enhancements
+  startY: number
 ): number {
   let y = startY
   const title = 'WhatsApp Conversation Transcript'
@@ -1125,7 +1124,6 @@ async function drawMediaLink(
 ): Promise<number> {
   // Determine the media type display label
   let mediaTypeLabel = 'File'
-  const icon = '' // Safe fallback, emojis unreliable
 
   if (message.type === 'image') {
     mediaTypeLabel = 'Image'
